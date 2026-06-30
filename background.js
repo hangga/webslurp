@@ -22,7 +22,7 @@ chrome.action.onClicked.addListener(() => {
     chrome.windows.create({
         url: 'popup.html',
         type: 'popup',          // tampil seperti modal
-        width: 900,
+        width: 700,
         height: 700,
         focused: true
     });

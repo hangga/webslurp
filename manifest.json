@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "API Monitor",
+  "name": "APISlurp",
   "description": "Capture Fetch/XHR API Requests with edit & replay",
   "version": "1.2",
   "permissions": ["storage", "tabs", "activeTab", "debugger"],

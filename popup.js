@@ -2,6 +2,7 @@
 let logs = [];
 let expandedId = null;
 let editingId = null;
+let isAttached = false; // untuk mencegah attach berulang
 
 // ── DOM refs ──
 const logsContainer = document.getElementById('logs');
@@ -58,7 +59,7 @@ function render() {
     attachDetailEvents(realIdx);
   });
 
-  if (logs.length === 0) statusText.textContent = 'No requests yet';
+  if (logs.length === 0) statusText.textContent = isAttached ? 'Attached, waiting for requests…' : 'Not attached';
   else statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
 }
 
@@ -73,12 +74,6 @@ function buildDetailContent(log, idx) {
       <label>URL</label>
       <div class="value ${isEditing ? 'editable' : ''}" data-field="url">
         ${isEditing ? `<input type="text" value="${escapeHtml(log.url)}" />` : escapeHtml(log.url)}
-      </div>
-    </div>
-    <div class="detail-section">
-      <label>Method</label>
-      <div class="value ${isEditing ? 'editable' : ''}" data-field="method">
-        ${isEditing ? `<input type="text" value="${log.method || 'GET'}" />` : (log.method || 'GET')}
       </div>
     </div>
     <div class="detail-section">
@@ -173,7 +168,6 @@ function copyAsCurl(idx) {
   navigator.clipboard.writeText(curl).then(() => {
     statusText.textContent = 'cURL copied!';
   }).catch(() => {
-    // fallback
     const textarea = document.createElement('textarea');
     textarea.value = curl;
     document.body.appendChild(textarea);
@@ -191,24 +185,15 @@ function generateCurl(log) {
   const body = log.requestBody || '';
 
   let parts = [`curl -X ${method}`];
-  
-  // Tambahkan headers
   for (const [key, value] of Object.entries(headers)) {
-    // Skip header yang tidak diperlukan atau berbahaya
     if (key.toLowerCase() === 'host') continue;
     parts.push(`-H "${key}: ${value.replace(/"/g, '\\"')}"`);
   }
-
-  // Tambahkan body jika ada dan method bukan GET/HEAD
   if (body && method !== 'GET' && method !== 'HEAD') {
-    // Escape body untuk dimasukkan dalam string
     const escapedBody = body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     parts.push(`-d "${escapedBody}"`);
   }
-
-  // Tambahkan URL (dengan kutip)
   parts.push(`"${url}"`);
-
   return parts.join(' \\\n  ');
 }
 
@@ -270,6 +255,31 @@ async function sendRequest(idx) {
   }
 }
 
+// ── Auto Attach ──
+async function autoAttach() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length === 0) {
+      statusText.textContent = 'No active tab';
+      return;
+    }
+    const response = await chrome.runtime.sendMessage({ 
+      action: 'attach', 
+      tabId: tabs[0].id 
+    });
+    if (response && response.success) {
+      isAttached = true;
+      statusText.textContent = `Attached to tab ${tabs[0].id}`;
+    } else {
+      isAttached = false;
+      statusText.textContent = 'Attach failed';
+    }
+  } catch (err) {
+    isAttached = false;
+    statusText.textContent = `Attach error: ${err.message}`;
+  }
+}
+
 // ── Event listeners ──
 document.getElementById('search').onkeyup = refresh;
 
@@ -286,15 +296,24 @@ document.getElementById('clear').onclick = async () => {
   }
 };
 
+// Tombol Attach tetap tersedia untuk re-attach manual
 document.getElementById('attach').onclick = async () => {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const response = await chrome.runtime.sendMessage({ action: 'attach', tabId: tabs[0].id });
   if (response && response.success) {
+    isAttached = true;
     statusText.textContent = `Attached to tab ${tabs[0].id}`;
   } else {
+    isAttached = false;
     statusText.textContent = 'Attach failed';
   }
 };
 
+// ── Inisialisasi ──
+(async function init() {
+  await refresh();
+  await autoAttach(); // langsung attach saat popup terbuka
+})();
+
+// ── Auto-refresh setiap 1 detik ──
 setInterval(refresh, 1000);
-refresh();
