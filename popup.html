@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>APISlurp</title>
+  <title>API Slurp</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
   <header id="toolbar">
     <div class="brand">
-      <span class="icon">⚡</span>
-      <span>APISlurp</span>
+      <span class="icon">🧃</span>
+      <span>API Slurp</span>
     </div>
     <div class="actions">
       <button id="attach" class="btn primary">Attach</button>
@@ -24,7 +24,14 @@
     <span id="count-badge">0</span>
   </div>
 
-  <div id="logs"></div>
+  <!-- SPLIT VIEW: kiri = list, kanan = detail -->
+  <div id="split-view">
+    <div id="log-list"></div>
+    <div id="detail-panel">
+      <div id="detail-empty">Select a request to view details</div>
+      <div id="detail-content" style="display:none;"></div>
+    </div>
+  </div>
 
   <footer id="status-bar">
     <span id="status-text">Ready</span>
