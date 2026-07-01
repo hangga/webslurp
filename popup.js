@@ -2,7 +2,7 @@
 let logs = [];
 let expandedId = null;
 let editingId = null;
-let isAttached = false; // untuk mencegah attach berulang
+let isAttached = false;
 
 // ── DOM refs ──
 const logsContainer = document.getElementById('logs');
@@ -59,8 +59,11 @@ function render() {
     attachDetailEvents(realIdx);
   });
 
-  if (logs.length === 0) statusText.textContent = isAttached ? 'Attached, waiting for requests…' : 'Not attached';
-  else statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
+  if (logs.length === 0) {
+    statusText.textContent = isAttached ? 'Attached, waiting for requests…' : 'Not attached';
+  } else {
+    statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
+  }
 }
 
 function buildDetailContent(log, idx) {
@@ -74,6 +77,12 @@ function buildDetailContent(log, idx) {
       <label>URL</label>
       <div class="value ${isEditing ? 'editable' : ''}" data-field="url">
         ${isEditing ? `<input type="text" value="${escapeHtml(log.url)}" />` : escapeHtml(log.url)}
+      </div>
+    </div>
+    <div class="detail-section">
+      <label>Method</label>
+      <div class="value ${isEditing ? 'editable' : ''}" data-field="method">
+        ${isEditing ? `<input type="text" value="${log.method || 'GET'}" />` : (log.method || 'GET')}
       </div>
     </div>
     <div class="detail-section">
@@ -309,11 +318,19 @@ document.getElementById('attach').onclick = async () => {
   }
 };
 
+// ── 🔥 STORAGE ONCHANGED (TANPA POLLING) 🔥 ──
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.logs) {
+    // Hanya refresh jika data logs berubah
+    refresh();
+  }
+});
+
 // ── Inisialisasi ──
 (async function init() {
   await refresh();
-  await autoAttach(); // langsung attach saat popup terbuka
+  await autoAttach();
 })();
 
-// ── Auto-refresh setiap 1 detik ──
-setInterval(refresh, 1000);
+// ── ❌ TIDAK ADA setInterval lagi! ──
+// Ekstensi hanya akan update saat ada perubahan storage
