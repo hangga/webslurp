@@ -93,37 +93,7 @@ function renderDetail(idx) {
   }
 
   detailContent.innerHTML = `
-    <div class="detail-section">
-      <label>URL</label>
-      <div class="value ${isEditing ? 'editable' : ''}" data-field="url">
-        ${isEditing ? `<input type="text" value="${escapeHtml(log.url)}" />` : escapeHtml(log.url)}
-      </div>
-    </div>
-    <div class="detail-section">
-      <label>Method</label>
-      <div class="value ${isEditing ? 'editable' : ''}" data-field="method">
-        ${isEditing ? `<input type="text" value="${log.method || 'GET'}" />` : (log.method || 'GET')}
-      </div>
-    </div>
-    <div class="detail-section">
-      <label>Request Headers</label>
-      <div class="value ${isEditing ? 'editable' : ''}" data-field="headers">
-        ${isEditing ? `<textarea rows="3">${escapeHtml(headersStr)}</textarea>` : escapeHtml(headersStr)}
-      </div>
-    </div>
-    <div class="detail-section">
-      <label>Request Body</label>
-      <div class="value ${isEditing ? 'editable' : ''}" data-field="body">
-        ${isEditing ? `<textarea rows="2">${escapeHtml(reqBody)}</textarea>` : (reqBody ? escapeHtml(reqBody) : '<i style="color:#666">(none)</i>')}
-      </div>
-    </div>
-    <div class="detail-section">
-      <label>Response</label>
-      <div class="value" style="max-height:200px;">
-        ${escapeHtml(bodyStr)}
-      </div>
-    </div>
-    <div class="detail-actions">
+  <div class="detail-actions">
       ${isEditing ? `
         <button class="btn btn-send" data-action="send" ${isSending ? 'disabled' : ''}>
           ${isSending ? '⏳ Sending...' : '▶ Send'}
@@ -135,6 +105,60 @@ function renderDetail(idx) {
       `}
       ${sendStatusHtml}
     </div>
+    
+    <div class="detail-section">
+
+        <label>URL</label>
+
+        <div class="url-row">
+
+            <div class="value method-value ${isEditing ? 'editable' : ''}" data-field="method">
+            ${
+                isEditing
+                ? `
+                <select>
+                    ${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(method => `
+                    <option value="${method}" ${method === (log.method || 'GET') ? 'selected' : ''}>
+                        ${method}
+                    </option>
+                    `).join('')}
+                </select>
+                `
+                : (log.method || 'GET')
+            }
+            </div>
+
+            <div class="value url-value ${isEditing ? 'editable' : ''}" data-field="url">
+            ${
+                isEditing
+                ? `<input type="text" value="${formatOutput(log.url)}" />`
+                : formatOutput(log.url)
+            }
+            </div>
+
+        </div>
+
+        </div>
+    
+    <div class="detail-section">
+      <label>Request Headers</label>
+      <div class="value ${isEditing ? 'editable' : ''}" data-field="headers">
+        ${isEditing ? `<textarea rows="5">${formatOutput(headersStr)}</textarea>` : formatOutput(headersStr)}
+      </div>
+    </div>
+    <div class="detail-section">
+      <label>Request Body</label>
+      <div class="value ${isEditing ? 'editable' : ''}" data-field="body">
+        ${isEditing ? `<textarea rows="5">${formatOutput(reqBody)}</textarea>` : (reqBody ? formatOutput(reqBody) : '<i style="color:#666">(none)</i>')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <label>Response</label>
+      <div class="value" style="max-height:200px;">
+        ${formatOutput(bodyStr)}
+      </div>
+    </div>
+    
   `;
 
   // Event listeners tombol
@@ -155,10 +179,26 @@ function renderDetail(idx) {
 }
 
 // ── Helper ──
+
+function formatOutput(str) {
+  str = String(str ?? '').trim();
+
+  try {
+    // Kalau valid JSON
+    const pretty = JSON.stringify(JSON.parse(str), null, 2);
+    return escapeHtml(pretty);
+  } catch {
+    // Bukan JSON
+    return escapeHtml(str);
+  }
+}
+
 function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;').replace(/\n/g,'&#10;');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // ── Copy cURL ──
@@ -204,7 +244,7 @@ async function sendRequest(idx) {
   if (!log) return;
 
   const urlInput = detailContent.querySelector('[data-field="url"] input');
-  const methodInput = detailContent.querySelector('[data-field="method"] input');
+  const methodInput = detailContent.querySelector('[data-field="method"] select');
   const headersInput = detailContent.querySelector('[data-field="headers"] textarea');
   const bodyInput = detailContent.querySelector('[data-field="body"] textarea');
 
