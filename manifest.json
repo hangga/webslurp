@@ -1,26 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "API Monitor",
-  "description": "Capture Fetch/XHR API Requests",
-  "version": "1.0",
-
-  "permissions": [
-    "storage",
-    "tabs",
-    "activeTab",
-    "debugger"
-  ],
-
-  "host_permissions": [
-    "<all_urls>"
-  ],
-
+  "name": "API Slurp",
+  "description": "Slurp, inspect & replay API requests",
+  "version": "1.3",
+  "permissions": ["storage", "tabs", "activeTab", "debugger"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
-
+  "devtools_page": "devtools.html",
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "API Monitor"
+    "default_title": "API Slurp"
   }
 }

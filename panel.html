@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Slurp</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <header id="toolbar">
+    <div class="brand">
+      <span class="icon">🥤</span>
+      <span>API Slurp</span>
+    </div>
+    <div class="actions">
+      <button id="attach" class="btn primary">Attach</button>
+      <button id="clear" class="btn secondary">Clear</button>
+    </div>
+  </header>
+
+  <div id="search-bar">
+    <span class="search-icon">🔍</span>
+    <input id="search" type="text" placeholder="Filter by URL…" spellcheck="false" />
+    <span id="count-badge">0</span>
+  </div>
+
+  <div id="split-view">
+    <div id="log-list"></div>
+    <div id="detail-panel">
+      <div id="detail-empty">Select a request to view details</div>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+
+  <footer id="status-bar">
+    <span id="status-text">Ready</span>
+    <span id="status-count">0 requests</span>
+  </footer>
+
+  <script src="panel.js"></script>
+</body>
+</html>
