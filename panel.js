@@ -70,11 +70,21 @@ function statusClass(code) {
   return 'status-5xx';
 }
 
+// ── headersToArray: support object & array ──
 function headersToArray(headers) {
   if (!headers) return [];
-  if (Array.isArray(headers)) return headers;
-  return Object.entries(headers).map(([k, v]) => ({ key: k, value: String(v) }));
+  if (Array.isArray(headers)) {
+    return headers.map(h => ({
+      key: h.name || h.key || '',
+      value: String(h.value || '')
+    }));
+  }
+  return Object.entries(headers).map(([k, v]) => ({
+    key: k,
+    value: String(v)
+  }));
 }
+
 function headersToObject(arr) {
   const obj = {};
   arr.forEach(({ key, value }) => {
@@ -130,7 +140,7 @@ function selectLog(idx) {
   }
   selectedId = idx;
   editingId = null;
-  activeTab = 'request';   // reset ke tab Request saat pilih log baru
+  activeTab = 'request';
   activeSubTab = 'params';
   renderList();
   renderDetail(idx);
@@ -154,6 +164,10 @@ function renderDetail(idx) {
     detailContent.style.display = 'none';
     return;
   }
+
+  // DEBUG: lihat headers di console
+  console.log('[BrutuSuite] Render detail log:', log);
+  console.log('[BrutuSuite] requestHeaders:', log.requestHeaders);
 
   detailEmpty.style.display = 'none';
   detailContent.style.display = 'flex';
@@ -239,7 +253,6 @@ function renderDetail(idx) {
       <button class="sub-tab ${activeSubTab === 'body' ? 'active' : ''}" data-subtab="body">Body</button>
     </div>`;
 
-    // Konten sub-tab
     html += `<div class="sub-content">`;
     html += renderParamsSubtab(log, idx);
     html += renderAuthSubtab(log, idx);
@@ -249,7 +262,7 @@ function renderDetail(idx) {
   } else {
     // Read-only mode: tampilkan semua info secara ringkas
     html += `<div class="readonly-detail">`;
-    // Headers
+    // Headers - gunakan headersToArray yang sudah ditingkatkan
     const headersArr = headersToArray(log.requestHeaders || {});
     html += `<div class="ro-section"><label>Headers</label>`;
     if (headersArr.length) {
@@ -321,12 +334,12 @@ function renderDetail(idx) {
       const tabName = this.dataset.tab;
       if (tabName && tabName !== activeTab) {
         activeTab = tabName;
-        renderDetail(idx);  // render ulang dengan tab baru
+        renderDetail(idx);
       }
     });
   });
 
-  // Sub-tabs (hanya jika ada)
+  // Sub-tabs
   detailContent.querySelectorAll('.sub-tab').forEach(tab => {
     tab.addEventListener('click', function(e) {
       const subTab = this.dataset.subtab;
@@ -361,7 +374,6 @@ function renderDetail(idx) {
     copyBtn.addEventListener('click', () => copyAsCurl(idx));
   }
 
-  // ── Event listener untuk perubahan di sub-tab ──
   if (isEditing) {
     attachSubtabEvents(idx);
   }
@@ -1119,7 +1131,7 @@ async function sendRequest(idx) {
     await chrome.storage.local.set({ logs });
     sendingId = null;
     selectedId = idx;
-    activeTab = 'response';  // otomatis pindah ke tab Response setelah send
+    activeTab = 'response';
     renderList();
     renderDetail(idx);
     statusText.textContent = `Sent (${response.status}) in ${elapsed}ms`;
@@ -1132,7 +1144,7 @@ async function sendRequest(idx) {
   }
 }
 
-// ── Copy cURL ──
+// ── Copy cURL dengan flag -b jika ada Cookie ──
 function copyAsCurl(idx) {
   const log = logs[idx];
   if (!log) return;
@@ -1150,16 +1162,30 @@ function copyAsCurl(idx) {
   });
 }
 
+// ── generateCurl dengan -b untuk Cookie ──
 function generateCurl(log) {
   const method = log.method || 'GET';
   const url = log.url;
   const headers = log.requestHeaders || {};
   const body = log.requestBody || '';
   let parts = [`curl -X ${method}`];
+  
+  let cookieHeader = '';
+  // Loop header, pisahkan Cookie
   for (const [k, v] of Object.entries(headers)) {
-    if (k.toLowerCase() === 'host') continue;
+    const keyLower = k.toLowerCase();
+    if (keyLower === 'cookie') {
+      cookieHeader = v;
+      continue; // skip tambahkan sebagai -H
+    }
+    if (keyLower === 'host') continue;
     parts.push(`-H "${k}: ${v.replace(/"/g, '\\"')}"`);
   }
+  // Tambahkan -b jika ada cookie
+  if (cookieHeader) {
+    parts.push(`-b "${cookieHeader.replace(/"/g, '\\"')}"`);
+  }
+  
   if (body && method !== 'GET' && method !== 'HEAD') {
     const escaped = body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     parts.push(`-d "${escaped}"`);

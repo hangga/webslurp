@@ -1,8 +1,7 @@
 let attachedTabs = {};
 let logs = [];
 const MAX_LOGS = 200;
-
-const pendingRequests = new Map(); // requestId -> { method, headers, postData }
+const pendingRequests = new Map(); // requestId -> { method, headers, postData, url }
 
 async function saveLogs() {
     await chrome.storage.local.set({ logs });
@@ -36,82 +35,68 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 });
 
-// --- Tangkap request akan dikirim ---
-// chrome.debugger.onEvent.addListener((source, method, params) => {
-//     if (method === "Network.requestWillBeSent") {
-//         if (!attachedTabs[source.tabId]) return;
-//         const requestId = params.requestId;
-//         const request = params.request;
+// --- Helper: cari header case-insensitive ---
+function getHeader(headers, name) {
+    if (!headers) return undefined;
+    const lowerName = name.toLowerCase();
+    for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === lowerName) return headers[key];
+    }
+    return undefined;
+}
 
-//         // Simpan data awal
-//         pendingRequests.set(requestId, {
-//             method: request.method,
-//             headers: request.headers, // Termasuk Cookie jika ada
-//             postData: '' // akan diisi nanti
-//         });
-
-//         // Ambil request body secara eksplisit (jika ada)
-//         chrome.debugger.sendCommand(
-//             source,
-//             "Network.getRequestPostData",
-//             { requestId },
-//             (result) => {
-//                 if (chrome.runtime.lastError) {
-//                     // Tidak ada body atau error, biarkan kosong
-//                     return;
-//                 }
-//                 const pending = pendingRequests.get(requestId);
-//                 if (pending) {
-//                     pending.postData = result.postData || '';
-//                 }
-//             }
-//         );
-//     }
-// });
-
+// --- Event 1: Request akan dikirim (ambil headers dasar & url) ---
 chrome.debugger.onEvent.addListener((source, method, params) => {
     if (method === "Network.requestWillBeSent") {
         if (!attachedTabs[source.tabId]) return;
         const requestId = params.requestId;
         const request = params.request;
 
-        // --- Log header untuk debugging ---
-        console.log('[BrutuSuite] Request headers:', request.headers);
-        if (request.headers.Cookie) {
-            console.log('[BrutuSuite] Cookie ditemukan:', request.headers.Cookie);
-        } else {
-            console.log('[BrutuSuite] Tidak ada Cookie di header.');
-        }
+        // Simpan headers awal (mungkin tidak lengkap)
+        const headersCopy = { ...request.headers };
 
-        // Simpan salinan header (deep copy sederhana)
-        const headersCopy = {};
-        for (const [key, value] of Object.entries(request.headers)) {
-            headersCopy[key] = value;
-        }
-
+        // Simpan pending dengan url untuk nanti ambil cookie
         pendingRequests.set(requestId, {
             method: request.method,
             headers: headersCopy,
-            postData: ''
+            postData: '',
+            url: request.url
         });
-
-        // Ambil request body (jika ada)
-        chrome.debugger.sendCommand(
-            source,
-            "Network.getRequestPostData",
-            { requestId },
-            (result) => {
-                if (chrome.runtime.lastError) return;
-                const pending = pendingRequests.get(requestId);
-                if (pending && result.postData) {
-                    pending.postData = result.postData;
-                }
-            }
-        );
     }
 });
 
-// --- Tangkap response diterima ---
+// --- Event 2: Informasi tambahan (header lengkap & postData) ---
+chrome.debugger.onEvent.addListener((source, method, params) => {
+    if (method === "Network.requestWillBeSentExtraInfo") {
+        const requestId = params.requestId;
+        const pending = pendingRequests.get(requestId);
+        if (!pending) return;
+
+        // Jika ExtraInfo memberikan headers (biasanya lengkap)
+        if (params.headers) {
+            // Gabungkan headers dari ExtraInfo (lebih lengkap)
+            // Tapi hati-hati, ExtraInfo mungkin juga tidak punya Cookie
+            const extraHeaders = { ...params.headers };
+            // Timpa headers yang sudah ada dengan yang lebih lengkap
+            pending.headers = extraHeaders;
+        }
+
+        // Ambil postData jika ada
+        if (params.postData) {
+            let data = params.postData.data || '';
+            if (params.postData.base64Encoded) {
+                try {
+                    data = atob(data);
+                } catch {
+                    // biarkan sebagai base64
+                }
+            }
+            pending.postData = data;
+        }
+    }
+});
+
+// --- Event 3: Response diterima (simpan log, ambil cookie dari cookies API jika perlu) ---
 chrome.debugger.onEvent.addListener(async (source, method, params) => {
     if (method !== "Network.responseReceived") return;
     if (!attachedTabs[source.tabId]) return;
@@ -120,7 +105,7 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
     const pending = pendingRequests.get(requestId);
     if (!pending) return;
 
-    // Filter berdasarkan host (sesuai logika sebelumnya)
+    // Filter host
     let page;
     try {
         page = await chrome.tabs.get(source.tabId);
@@ -134,7 +119,7 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
     if (!apiHost.endsWith(base)) return;
     if (params.type !== "XHR" && params.type !== "Fetch") return;
 
-    // Ambil response body
+    // --- Ambil response body ---
     let body = "";
     try {
         const response = await chrome.debugger.sendCommand(
@@ -143,11 +128,9 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
             { requestId }
         );
         if (response.base64Encoded) {
-            // Coba decode sebagai teks (untuk JSON/XML/HTML)
             try {
                 body = atob(response.body);
             } catch {
-                // Jika gagal, simpan sebagai base64 (tapi mungkin tidak terbaca)
                 body = response.body;
             }
         } else {
@@ -155,7 +138,7 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
         }
     } catch {}
 
-    // Ambil response headers
+    // --- Response headers ---
     const rawHeaders = params.response.headers || [];
     const responseHeaders = {};
     if (Array.isArray(rawHeaders)) {
@@ -166,7 +149,33 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
         Object.assign(responseHeaders, rawHeaders);
     }
 
-    // Simpan log lengkap
+    // --- Ambil headers request ---
+    let requestHeaders = pending.headers || {};
+
+    // Jika tidak ada Cookie di headers, ambil dari chrome.cookies API
+    const cookieHeader = getHeader(requestHeaders, 'cookie');
+    if (!cookieHeader) {
+        console.log('[BrutuSuite] Cookie tidak ada di headers, mengambil dari chrome.cookies API...');
+        try {
+            // Ambil semua cookie untuk URL ini
+            const cookies = await chrome.cookies.getAll({ url: pending.url });
+            if (cookies.length > 0) {
+                // Bentuk string cookie: name=value; name2=value2
+                const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+                // Tambahkan ke headers
+                requestHeaders['Cookie'] = cookieString;
+                console.log('[BrutuSuite] Cookie berhasil diambil dari cookies API:', cookieString);
+            } else {
+                console.log('[BrutuSuite] Tidak ada cookie untuk URL ini.');
+            }
+        } catch (err) {
+            console.error('[BrutuSuite] Gagal mengambil cookie:', err);
+        }
+    } else {
+        console.log('[BrutuSuite] Cookie sudah ada di headers:', cookieHeader);
+    }
+
+    // --- Simpan log ---
     await addLog({
         time: new Date().toLocaleTimeString(),
         url: url,
@@ -174,7 +183,7 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
         statusText: params.response.statusText || "",
         mime: params.response.mimeType,
         method: pending.method || 'GET',
-        requestHeaders: pending.headers || {}, // <-- Cookie otomatis ada di sini
+        requestHeaders: requestHeaders,
         requestBody: pending.postData || '',
         response: body,
         responseHeaders: responseHeaders
