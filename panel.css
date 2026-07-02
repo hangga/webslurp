@@ -84,9 +84,27 @@ body {
 #split-view {
   display: flex;
   flex: 1;
-  overflow: hidden;         /* mencegah overflow keluar */
-  min-height: 0;            /* penting untuk flex child */
+  overflow: hidden;
+  min-height: 0;
 }
+
+#log-list {
+  flex: 1;
+  min-width: 200px;
+  overflow: auto;
+}
+
+#divider {
+  width: 6px;
+  cursor: col-resize;
+  background: #ddd;
+  flex-shrink: 0;
+}
+
+#divider:hover {
+  background: #999;
+}
+
 
 #log-list {
   width: 45%;
@@ -186,9 +204,10 @@ body {
   border-radius: 6px;
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 12px;
-  white-space: pre-wrap;
+  /* white-space: pre-wrap; */
   word-break: break-all;
-  max-height: 120px;         /* tetap membatasi tinggi value */
+  /* max-height: 120px;          */
+  /* tetap membatasi tinggi value */
   overflow-y: auto;          /* value bisa scroll sendiri */
   border: 1px solid #2a2a2a;
 }
@@ -207,7 +226,7 @@ body {
   resize: vertical;
   outline: none;
 }
-.detail-section .value input { padding: 4px 0; }
+/* .detail-section .value input { padding: 4px 0; } */
 
 .detail-actions {
   display: flex;
@@ -296,3 +315,87 @@ body {
 .status-3xx { background: #5a4a1a; color: #e0c070; }
 .status-4xx { background: #5a2a2a; color: #f08a7a; }
 .status-5xx { background: #6a1a1a; color: #f06a5a; }
+
+
+/* ---------- Select ---------- */
+
+.detail-section .value select,
+select {
+  width: 100%;
+  background: #222;
+  color: #e0e0e0;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px 34px 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+
+  /* remove native style */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* custom arrow */
+  background-image:
+    linear-gradient(45deg, transparent 50%, #888 50%),
+    linear-gradient(135deg, #888 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 11px) calc(50% - 2px);
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.detail-section .value select:hover,
+select:hover {
+  border-color: #4a4a4a;
+  background-color: #252525;
+}
+
+.detail-section .value select:focus,
+select:focus {
+  border-color: #4a7da0;
+  box-shadow: 0 0 0 2px rgba(74, 125, 160, 0.15);
+}
+
+.detail-section .value select:disabled,
+select:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Dropdown items (didukung Chromium, termasuk Chrome Extension) */
+select option {
+  background: #1c1c1c;
+  color: #e0e0e0;
+}
+
+select option:checked {
+  background: #2a6b9c;
+  color: #fff;
+}
+
+.url-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.method-value {
+  /* flex: 0 0 110px;    */
+  flex: 0 0 90px;
+  /* lebar tetap */
+}
+
+.url-value {
+  flex: 1;
+  min-width: 0;      /* penting agar bisa mengecil */
+}
+
+.method-value select,
+.url-value input {
+  height: 100%;
+}
