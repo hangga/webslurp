@@ -14,6 +14,32 @@ const searchInput = document.getElementById('search');
 const countBadge = document.getElementById('count-badge');
 const statusText = document.getElementById('status-text');
 const statusCount = document.getElementById('status-count');
+const divider = document.getElementById('divider');
+
+// ── Resize divider (drag) ──
+let isDragging = false;
+
+divider.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const rect = document.getElementById('split-view').getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const percentage = Math.min(Math.max((x / rect.width) * 100, 15), 85);
+  logListEl.style.width = percentage + '%';
+});
+
+document.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
 
 // ── Render daftar di kiri ──
 function renderList() {
@@ -134,6 +160,27 @@ function renderDetail(idx) {
   // ── Build HTML ──
   let html = '';
 
+  // ── Actions di atas ──
+  html += `<div class="detail-actions">`;
+  if (isEditing) {
+    html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+      ${isSending ? '⏳ Sending...' : '▶ Send'}
+    </button>
+    <button class="btn btn-cancel" id="action-cancel" ${isSending ? 'disabled' : ''}>Cancel</button>`;
+  } else {
+    html += `<button class="btn btn-edit" id="action-edit">✎ Edit</button>
+    <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
+  }
+  // Send status
+  if (isSending) {
+    html += `<div class="send-status sending"><span class="spinner"></span> Sending...</div>`;
+  } else if (log.sendStatus) {
+    const label = log.sendStatus === 'success' ? '✅ Sent' : '❌ Failed';
+    const cls = log.sendStatus === 'success' ? 'success' : 'error';
+    html += `<div class="send-status ${cls}">${label}</div>`;
+  }
+  html += `</div>`;
+
   // Tabs
   html += `<div class="detail-tabs">
     <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">
@@ -235,27 +282,6 @@ function renderDetail(idx) {
     } else {
       html += `<div class="readonly-body"><span class="empty-hint">(no body)</span></div>`;
     }
-  }
-  html += `</div>`;
-
-  // Actions
-  html += `<div class="detail-actions">`;
-  if (isEditing) {
-    html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
-      ${isSending ? '⏳ Sending...' : '▶ Send'}
-    </button>
-    <button class="btn btn-cancel" id="action-cancel" ${isSending ? 'disabled' : ''}>Cancel</button>`;
-  } else {
-    html += `<button class="btn btn-edit" id="action-edit">✎ Edit</button>
-    <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
-  }
-  // Send status
-  if (isSending) {
-    html += `<div class="send-status sending"><span class="spinner"></span> Sending...</div>`;
-  } else if (log.sendStatus) {
-    const label = log.sendStatus === 'success' ? '✅ Sent' : '❌ Failed';
-    const cls = log.sendStatus === 'success' ? 'success' : 'error';
-    html += `<div class="send-status ${cls}">${label}</div>`;
   }
   html += `</div>`;
 
