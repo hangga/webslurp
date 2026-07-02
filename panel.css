@@ -723,6 +723,7 @@ body {
 }
 #status-text { color: #7a9aba; }
 #status-count { color: #7a8a9a; }
+#status-link { color: #7a8a9a; text-decoration: none; max-width: 100px; font-size: 11px;}
 
 /* ── SCROLLBARS ── */
 #detail-panel::-webkit-scrollbar, #log-list::-webkit-scrollbar,
