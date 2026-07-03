@@ -138,8 +138,10 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 🙏 Acknowledgements
 
 - Built with the Chrome Extensions API.
-- Icons from the [Material Design](https://material.io/icons) library.
+- Icons from the Material Design library.
 - Inspired by tools like Postman, Insomnia, and Burp Suite.
+  
+> **Fun fact:** "Brutu" is Javanese for the chicken's tail. It has a cult following because it's unexpectedly delicious. Hopefully, this extension becomes as beloved as its namesake. 😆
 
 ---
 
