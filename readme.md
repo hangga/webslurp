@@ -6,6 +6,8 @@
 
 **BrutuSuite** is a powerful Chrome DevTools extension that lets you **intercept, inspect, modify, and replay** HTTP/HTTPS API requests directly from your browser's DevTools. It's designed for developers, testers, and security enthusiasts who need deep visibility and control over network traffic.
 
+[![Demo](preview.gif)](https://github.com/user-attachments/assets/f1d04663-022e-4385-9243-9cd3e7988e11)
+
 ---
 
 ## 🚀 Features
