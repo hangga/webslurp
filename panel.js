@@ -106,6 +106,35 @@ function headersToObject(arr) {
   return obj;
 }
 
+// ── Validasi URL ──
+function ensureValidUrl(url) {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  return url;
+}
+
+// ── Bersihkan header (hapus yang tidak valid) ──
+function cleanHeaders(headers) {
+  // Header yang dikelola otomatis oleh browser, tidak boleh dikirim manual
+  const forbidden = [
+    'host', 'content-length', 'connection', 'keep-alive',
+    'transfer-encoding', 'upgrade', 'via', 'proxy-connection'
+  ];
+  const cleaned = {};
+  for (const [key, value] of Object.entries(headers)) {
+    const trimmedKey = key.trim();
+    if (!trimmedKey) continue;                      // key kosong
+    if (trimmedKey.startsWith(':')) continue;      // pseudo-header (HTTP/2)
+    if (/[\s:]/.test(trimmedKey)) continue;        // mengandung spasi atau titik dua
+    const lowerKey = trimmedKey.toLowerCase();
+    if (forbidden.includes(lowerKey)) continue;
+    const val = (value !== undefined && value !== null) ? String(value) : '';
+    cleaned[trimmedKey] = val;
+  }
+  return cleaned;
+}
+
 // ── Filter logs ──
 function filterLogs() {
   const keyword = searchInput.value.toLowerCase().trim();
@@ -1019,7 +1048,9 @@ function updateFormFieldsFromUI(idx) {
       } else {
         const fileInput = row.querySelector('.form-file');
         const filename = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '';
-        fields.push({ key, value: filename, type: 'file', fileObj: fileInput ? fileInput.files[0] : null });
+        // Simpan fileObj sementara untuk dikirim (tidak disimpan di storage)
+        const fileObj = fileInput && fileInput.files[0] ? fileInput.files[0] : null;
+        fields.push({ key, value: filename, type: 'file', fileObj });
       }
     }
   });
@@ -1080,7 +1111,7 @@ function attachUrlencodedRowEvents(row, idx) {
   if (rmBtn) rmBtn.addEventListener('click', update);
 }
 
-// ── Send request ──
+// ── Send request (diperbaiki) ──
 async function sendRequest(idx) {
   if (sendingId !== null) return;
   const log = logs[idx];
@@ -1094,17 +1125,19 @@ async function sendRequest(idx) {
   let method = methodSelect ? methodSelect.value : (log.method || 'GET');
   let body = bodyTextarea ? bodyTextarea.value : (log.requestBody || '');
 
+  // Kumpulkan headers dari UI
   const headersArr = [];
   document.querySelectorAll('#headers-container .headers-row:not(.header-row)').forEach(row => {
     const key = row.querySelector('.header-key').value.trim();
     const val = row.querySelector('.header-value').value;
     if (key) headersArr.push({ key, value: val });
   });
-  const headers = headersToObject(headersArr);
+  let headers = headersToObject(headersArr);
 
+  // Auth
   const auth = log.auth || { type: 'none' };
   if (auth.type === 'basic') {
-    const creds = btoa(`${auth.username || ''}:${auth.password || ''}`);
+    const creds = btoa(unescape(encodeURIComponent(`${auth.username || ''}:${auth.password || ''}`)));
     headers['Authorization'] = `Basic ${creds}`;
   } else if (auth.type === 'bearer') {
     if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
@@ -1112,8 +1145,13 @@ async function sendRequest(idx) {
     if (auth.accessToken) headers['Authorization'] = `Bearer ${auth.accessToken}`;
   }
 
+  // Bersihkan header (buang yang tidak valid)
+  headers = cleanHeaders(headers);
+
   const mode = log.bodyMode || 'none';
   let fetchOptions = { method, headers };
+
+  // Siapkan body berdasarkan mode
   if (mode === 'raw') {
     const rawType = log.bodyRawType || 'text';
     if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type']) {
@@ -1129,14 +1167,18 @@ async function sendRequest(idx) {
     const fields = log.formDataFields || [];
     fields.forEach(f => {
       if (f.type === 'file') {
-        if (f.fileObj) {
+        if (f.fileObj && f.fileObj instanceof File) {
           formData.append(f.key, f.fileObj, f.fileObj.name);
+        } else if (f.value) {
+          // fallback: kirim nama file sebagai string
+          formData.append(f.key, f.value);
         }
       } else {
         formData.append(f.key, f.value || '');
       }
     });
     fetchOptions.body = formData;
+    // Hapus Content-Type agar browser mengatur boundary
     delete headers['Content-Type'];
     delete headers['content-type'];
   } else if (mode === 'x-www-form-urlencoded') {
@@ -1151,7 +1193,19 @@ async function sendRequest(idx) {
     }
   }
 
+  // Hapus body untuk method GET/HEAD
+  if (method === 'GET' || method === 'HEAD') {
+    delete fetchOptions.body;
+  }
+
+  // Update headers setelah modifikasi
   fetchOptions.headers = headers;
+
+  // Validasi URL
+  url = ensureValidUrl(url);
+
+  // Debug (bisa dihapus setelah selesai)
+  console.log('[BrutuSuite] Sending:', { url, method, headers, body: fetchOptions.body });
 
   sendingId = idx;
   delete log.sendStatus;
@@ -1183,7 +1237,7 @@ async function sendRequest(idx) {
       mime: response.headers.get('content-type') || '',
     };
     logs[idx] = newLog;
-    await chrome.storage.local.set({ logs });
+    await saveLogs();
     sendingId = null;
     selectedId = idx;
     activeTab = 'response';
@@ -1192,11 +1246,11 @@ async function sendRequest(idx) {
     statusText.textContent = `Sent (${response.status}) in ${elapsed}ms`;
   } catch (err) {
     logs[idx] = { ...log, sendStatus: 'error', sendError: err.message };
-    // await chrome.storage.local.set({ logs });
     await saveLogs();
     sendingId = null;
     renderDetail(idx);
-    statusText.textContent = `Error: ${err.message}`;
+    statusText.textContent = `❌ Error: ${err.message}`;
+    console.error('[BrutuSuite] Send error:', err);
   }
 }
 
@@ -1312,11 +1366,6 @@ document.getElementById('attach').onclick = async () => {
 };
 
 // ── Storage onChanged ──
-// chrome.storage.onChanged.addListener((changes, ns) => {
-//   if (ns === 'local' && changes.logs) {
-//     refresh();
-//   }
-// });
 chrome.storage.onChanged.addListener((changes, ns) => {
   if (ns === 'local' && changes.logs && !ignoreStorageChange) {
     refresh();
