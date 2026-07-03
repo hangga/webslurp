@@ -1,6 +1,8 @@
 # BrutuSuite
 
-<img width="500" src="logo-dark.png"/>
+<p align="center">
+  <img src="logo-dark.png" width="300" alt="BrutuSuite Logo">
+</p>
 
 ![BrutuSuite](https://img.shields.io/badge/version-1.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Chrome](https://img.shields.io/badge/Chrome-Extension-orange)
 
