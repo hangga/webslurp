@@ -12,7 +12,6 @@
       <a id="status-link" href="https://hangga.web.id/BrutuSuite" target="_blank">
       <img width="150px" class="icon" src="icons/logo-light-prop-small.png"/>
       </a>
-      <!-- <span>Brutu Suite</span> -->
     </div>
     <div class="actions">
       <button id="attach" class="btn primary">Intercept</button>
@@ -23,6 +22,24 @@
   <div id="search-bar">
     <span class="search-icon">🔍</span>
     <input id="search" type="text" placeholder="Filter by URL…" spellcheck="false" />
+    <select id="filter-method">
+      <option value="">All Methods</option>
+      <option value="GET">GET</option>
+      <option value="POST">POST</option>
+      <option value="PUT">PUT</option>
+      <option value="DELETE">DELETE</option>
+      <option value="PATCH">PATCH</option>
+      <option value="HEAD">HEAD</option>
+      <option value="OPTIONS">OPTIONS</option>
+    </select>
+    <select id="filter-status">
+      <option value="">All Status</option>
+      <option value="2xx">2xx Success</option>
+      <option value="3xx">3xx Redirect</option>
+      <option value="4xx">4xx Client Error</option>
+      <option value="5xx">5xx Server Error</option>
+    </select>
+    <input id="filter-content" type="text" placeholder="Search in request/response…" spellcheck="false" />
     <span id="count-badge">0</span>
   </div>
 

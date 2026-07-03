@@ -757,3 +757,108 @@ body {
 
 .tab-panel { display: none; }
 .tab-panel.active { display: grid; }
+
+/* ── FILTER BAR ── */
+#search-bar select, #search-bar input#filter-content {
+  background: #1a2430;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: #e0e8f0;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-left: 6px;
+  height: 30px;
+}
+#search-bar select:focus, #search-bar input#filter-content:focus {
+  border-color: #4a7da0;
+}
+#search-bar input#filter-content {
+  flex: 1 1 150px;
+  min-width: 100px;
+}
+
+/* ── HIGHLIGHT / NOTE ── */
+.log-entry.has-note {
+  border-left: 3px solid #f0c070;
+}
+.log-entry .note-icon {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #f0c070;
+}
+
+/* Detail note area */
+.note-area {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #1a2430;
+  border-radius: 6px;
+  border: 1px solid #2a3a4a;
+}
+.note-area label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #7a8a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 4px;
+}
+.note-area textarea {
+  width: 100%;
+  background: #131a24;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
+  color: #d4dce8;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 6px 8px;
+  resize: vertical;
+  outline: none;
+  min-height: 50px;
+}
+.note-area textarea:focus {
+  border-color: #4a7da0;
+}
+
+/* ── ENHANCED LOG ENTRY COLORS ── */
+.log-entry {
+  background: #131a24;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  border: 1px solid #1e2a36;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.log-entry:hover { background: #1a2430; border-color: #2a3a4a; }
+.log-entry.active { background: #1a2a3a; border-color: #4a7da0; }
+
+/* Warna berdasarkan status (untuk seluruh baris) */
+/* .log-entry.status-2xx { background: #1a3a2a; border-color: #2a5a3a; }
+.log-entry.status-3xx { background: #3a3a1a; border-color: #5a5a2a; }
+.log-entry.status-4xx { background: #3a1a1a; border-color: #5a2a2a; }
+.log-entry.status-5xx { background: #4a1a1a; border-color: #6a2a2a; }
+.log-entry.status-2xx:hover { background: #1a4a2a; }
+.log-entry.status-3xx:hover { background: #4a4a1a; }
+.log-entry.status-4xx:hover { background: #4a2a2a; }
+.log-entry.status-5xx:hover { background: #5a2a2a; } */
+
+/* Tapi tetap pertahankan status badge */
+.log-entry .status {
+  font-weight: 600;
+  min-width: 42px;
+  padding: 1px 6px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 11px;
+}
+.log-entry .status.status-2xx { background: #1f5a3a; color: #8fdcb0; }
+.log-entry .status.status-3xx { background: #5a4a1a; color: #e0c070; }
+.log-entry .status.status-4xx { background: #5a2a2a; color: #f08a7a; }
+.log-entry .status.status-5xx { background: #6a1a1a; color: #f06a5a; }
