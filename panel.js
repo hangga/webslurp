@@ -213,7 +213,7 @@ function renderDetail(idx) {
 
   // Normalisasi data (default)
   if (!log.queryParams) log.queryParams = [];
-  if (!log.bodyMode) log.bodyMode = 'none';
+  if (!log.bodyMode) log.bodyMode = 'raw';
   if (!log.bodyRawType) log.bodyRawType = 'text';
   if (!log.formDataFields) log.formDataFields = [];
   if (!log.auth) log.auth = { type: 'none' };
