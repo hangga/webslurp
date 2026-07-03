@@ -59,7 +59,7 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
         pendingRequests.set(requestId, {
             method: request.method,
             headers: headersCopy,
-            postData: '',
+            postData: request.postData,
             url: request.url
         });
     }

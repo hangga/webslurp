@@ -1,4 +1,3 @@
-// ── State ──
 let logs = [];
 let selectedId = null;
 let editingId = null;
@@ -12,6 +11,9 @@ const logListEl = document.getElementById('log-list');
 const detailEmpty = document.getElementById('detail-empty');
 const detailContent = document.getElementById('detail-content');
 const searchInput = document.getElementById('search');
+const filterMethod = document.getElementById('filter-method');
+const filterStatus = document.getElementById('filter-status');
+const filterContent = document.getElementById('filter-content');
 const countBadge = document.getElementById('count-badge');
 const statusText = document.getElementById('status-text');
 const statusCount = document.getElementById('status-count');
@@ -19,6 +21,17 @@ const divider = document.getElementById('divider');
 
 // ── Resize divider ──
 let isDragging = false;
+
+let ignoreStorageChange = false;
+
+async function saveLogs() {
+  ignoreStorageChange = true;
+  try {
+    await chrome.storage.local.set({ logs });
+  } finally {
+    ignoreStorageChange = false;
+  }
+}
 
 divider.addEventListener('mousedown', (e) => {
   isDragging = true;
@@ -93,12 +106,38 @@ function headersToObject(arr) {
   return obj;
 }
 
+// ── Filter logs ──
+function filterLogs() {
+  const keyword = searchInput.value.toLowerCase().trim();
+  const method = filterMethod.value;
+  const status = filterStatus.value;
+  const content = filterContent.value.toLowerCase().trim();
+
+  return logs.filter(log => {
+    // URL filter
+    if (keyword && !log.url.toLowerCase().includes(keyword)) return false;
+    // Method filter
+    if (method && log.method !== method) return false;
+    // Status filter
+    if (status) {
+      const code = log.status;
+      if (status === '2xx' && (code < 200 || code >= 300)) return false;
+      if (status === '3xx' && (code < 300 || code >= 400)) return false;
+      if (status === '4xx' && (code < 400 || code >= 500)) return false;
+      if (status === '5xx' && (code < 500 || code >= 600)) return false;
+    }
+    // Content filter (search in URL, request body, response)
+    if (content) {
+      const haystack = (log.url + ' ' + (log.requestBody || '') + ' ' + (log.response || '')).toLowerCase();
+      if (!haystack.includes(content)) return false;
+    }
+    return true;
+  });
+}
+
 // ── Render daftar ──
 function renderList() {
-  const keyword = searchInput.value.toLowerCase().trim();
-  const filtered = keyword
-    ? logs.filter(log => log.url.toLowerCase().includes(keyword))
-    : logs;
+  const filtered = filterLogs();
 
   countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
@@ -107,15 +146,15 @@ function renderList() {
   filtered.forEach((log, idx) => {
     const realIdx = logs.indexOf(log);
     const entry = document.createElement('div');
-    entry.className = 'log-entry' + (selectedId === realIdx ? ' active' : '');
+    const sc = statusClass(log.status);
+    entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
+    if (log.note) entry.classList.add('has-note');
 
-    const statusClass = log.status < 300 ? 'status-2xx' :
-                        log.status < 400 ? 'status-3xx' :
-                        log.status < 500 ? 'status-4xx' : 'status-5xx';
     entry.innerHTML = `
-      <span class="status ${statusClass}">${log.status}</span>
+      <span class="status ${sc}">${log.status}</span>
       <span class="method">${log.method || 'GET'}</span>
-      <span class="url">${log.url}</span>
+      <span class="url">${escapeHtml(log.url)}</span>
+      ${log.note ? `<span class="note-icon">📝</span>` : ''}
       <span class="time">${log.time || ''}</span>
     `;
     entry.addEventListener('click', () => selectLog(realIdx));
@@ -165,10 +204,6 @@ function renderDetail(idx) {
     return;
   }
 
-  // DEBUG: lihat headers di console
-  console.log('[BrutuSuite] Render detail log:', log);
-  console.log('[BrutuSuite] requestHeaders:', log.requestHeaders);
-
   detailEmpty.style.display = 'none';
   detailContent.style.display = 'flex';
   detailContent.className = 'active';
@@ -182,6 +217,7 @@ function renderDetail(idx) {
   if (!log.bodyRawType) log.bodyRawType = 'text';
   if (!log.formDataFields) log.formDataFields = [];
   if (!log.auth) log.auth = { type: 'none' };
+  if (!log.note) log.note = '';
 
   let html = '';
 
@@ -262,7 +298,7 @@ function renderDetail(idx) {
   } else {
     // Read-only mode: tampilkan semua info secara ringkas
     html += `<div class="readonly-detail">`;
-    // Headers - gunakan headersToArray yang sudah ditingkatkan
+    // Headers
     const headersArr = headersToArray(log.requestHeaders || {});
     html += `<div class="ro-section"><label>Headers</label>`;
     if (headersArr.length) {
@@ -324,6 +360,12 @@ function renderDetail(idx) {
   }
   html += `</div>`; // end response panel
 
+  // ── NOTE SECTION ──
+  html += `<div class="note-area">
+    <label>📝 Note</label>
+    <textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea>
+  </div>`;
+
   detailContent.innerHTML = html;
 
   // ── Wire up events ──
@@ -372,6 +414,18 @@ function renderDetail(idx) {
   const copyBtn = detailContent.querySelector('#action-copy');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => copyAsCurl(idx));
+  }
+
+  // Note textarea auto-save
+  const noteTextarea = document.getElementById('log-note');
+  if (noteTextarea) {
+    noteTextarea.addEventListener('input', () => {
+      const newNote = noteTextarea.value;
+      logs[idx].note = newNote;
+      chrome.storage.local.set({ logs });
+      // Update daftar jika note berubah
+      renderList();
+    });
   }
 
   if (isEditing) {
@@ -599,7 +653,8 @@ function attachSubtabEvents(idx) {
         log.url = newUrl;
         urlInput.value = newUrl;
       }
-      chrome.storage.local.set({ logs });
+      // chrome.storage.local.set({ logs });
+      saveLogs();
     };
     if (keyInput) keyInput.addEventListener('input', update);
     if (valInput) valInput.addEventListener('input', update);
@@ -1137,7 +1192,8 @@ async function sendRequest(idx) {
     statusText.textContent = `Sent (${response.status}) in ${elapsed}ms`;
   } catch (err) {
     logs[idx] = { ...log, sendStatus: 'error', sendError: err.message };
-    await chrome.storage.local.set({ logs });
+    // await chrome.storage.local.set({ logs });
+    await saveLogs();
     sendingId = null;
     renderDetail(idx);
     statusText.textContent = `Error: ${err.message}`;
@@ -1227,7 +1283,10 @@ async function autoAttach() {
 }
 
 // ── Event listeners ──
-document.getElementById('search').addEventListener('input', refresh);
+searchInput.addEventListener('input', renderList);
+filterMethod.addEventListener('change', renderList);
+filterStatus.addEventListener('change', renderList);
+filterContent.addEventListener('input', renderList);
 
 document.getElementById('clear').onclick = async () => {
   const res = await chrome.runtime.sendMessage({ action: 'clear' });
@@ -1236,7 +1295,9 @@ document.getElementById('clear').onclick = async () => {
     selectedId = null;
     editingId = null;
     sendingId = null;
-    refresh();
+    renderList();
+    detailEmpty.style.display = 'block';
+    detailContent.style.display = 'none';
     statusText.textContent = 'Cleared';
   }
 };
@@ -1251,8 +1312,13 @@ document.getElementById('attach').onclick = async () => {
 };
 
 // ── Storage onChanged ──
+// chrome.storage.onChanged.addListener((changes, ns) => {
+//   if (ns === 'local' && changes.logs) {
+//     refresh();
+//   }
+// });
 chrome.storage.onChanged.addListener((changes, ns) => {
-  if (ns === 'local' && changes.logs) {
+  if (ns === 'local' && changes.logs && !ignoreStorageChange) {
     refresh();
   }
 });
