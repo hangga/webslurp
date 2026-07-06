@@ -1,10 +1,12 @@
+// ── STATE ──
 let logs = [];
 let selectedId = null;
 let editingId = null;
 let sendingId = null;
-let isAttached = false;
-let activeTab = 'request'; // 'request' | 'response'
-let activeSubTab = 'params'; // 'params' | 'auth' | 'headers' | 'body'
+let activeTab = 'request';       // 'request' | 'response'
+let activeSubTab = 'params';     // 'params' | 'auth' | 'headers' | 'body'
+const MAX_LOGS = 200;
+let ignoreStorageChange = false;
 
 // ── DOM refs ──
 const logListEl = document.getElementById('log-list');
@@ -21,24 +23,11 @@ const divider = document.getElementById('divider');
 
 // ── Resize divider ──
 let isDragging = false;
-
-let ignoreStorageChange = false;
-
-async function saveLogs() {
-  ignoreStorageChange = true;
-  try {
-    await chrome.storage.local.set({ logs });
-  } finally {
-    ignoreStorageChange = false;
-  }
-}
-
 divider.addEventListener('mousedown', (e) => {
   isDragging = true;
   document.body.style.cursor = 'col-resize';
   document.body.style.userSelect = 'none';
 });
-
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   const rect = document.getElementById('split-view').getBoundingClientRect();
@@ -46,7 +35,6 @@ document.addEventListener('mousemove', (e) => {
   const percentage = Math.min(Math.max((x / rect.width) * 100, 15), 85);
   logListEl.style.width = percentage + '%';
 });
-
 document.addEventListener('mouseup', () => {
   if (isDragging) {
     isDragging = false;
@@ -83,7 +71,6 @@ function statusClass(code) {
   return 'status-5xx';
 }
 
-// ── headersToArray: support object & array ──
 function headersToArray(headers) {
   if (!headers) return [];
   if (Array.isArray(headers)) {
@@ -106,7 +93,6 @@ function headersToObject(arr) {
   return obj;
 }
 
-// ── Validasi URL ──
 function ensureValidUrl(url) {
   url = url.trim();
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -115,9 +101,7 @@ function ensureValidUrl(url) {
   return url;
 }
 
-// ── Bersihkan header (hapus yang tidak valid) ──
 function cleanHeaders(headers) {
-  // Header yang dikelola otomatis oleh browser, tidak boleh dikirim manual
   const forbidden = [
     'host', 'content-length', 'connection', 'keep-alive',
     'transfer-encoding', 'upgrade', 'via', 'proxy-connection'
@@ -125,10 +109,10 @@ function cleanHeaders(headers) {
   const cleaned = {};
   for (const [key, value] of Object.entries(headers)) {
     const trimmedKey = key.trim();
-    if (!trimmedKey) continue;                      // key kosong
-    if (trimmedKey.startsWith(':')) continue;      // pseudo-header (HTTP/2)
-    if (/[\s:]/.test(trimmedKey)) continue;        // mengandung spasi atau titik dua
-    if (/[\x00-\x1f\x7f]/.test(trimmedKey)) continue; // karakter kontrol
+    if (!trimmedKey) continue;
+    if (trimmedKey.startsWith(':')) continue;
+    if (/[\s:]/.test(trimmedKey)) continue;
+    if (/[\x00-\x1f\x7f]/.test(trimmedKey)) continue;
     const lowerKey = trimmedKey.toLowerCase();
     if (forbidden.includes(lowerKey)) continue;
     const val = (value !== undefined && value !== null) ? String(value) : '';
@@ -137,7 +121,33 @@ function cleanHeaders(headers) {
   return cleaned;
 }
 
-// ── Filter logs ──
+function buildUrlWithParams(log) {
+  let url = log.url || '';
+  const params = log.queryParams || [];
+  const qs = params.filter(p => p.key.trim()).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
+  if (qs) {
+    const separator = url.includes('?') ? '&' : '?';
+    url = url + separator + qs;
+  }
+  return url;
+}
+
+// ── Storage ──
+async function saveLogs() {
+  ignoreStorageChange = true;
+  try {
+    await chrome.storage.local.set({ logs });
+  } finally {
+    ignoreStorageChange = false;
+  }
+}
+
+async function loadLogs() {
+  const result = await chrome.storage.local.get('logs');
+  logs = result.logs || [];
+}
+
+// ── Filter ──
 function filterLogs() {
   const keyword = searchInput.value.toLowerCase().trim();
   const method = filterMethod.value;
@@ -162,10 +172,9 @@ function filterLogs() {
   });
 }
 
-// ── Render daftar ──
+// ── Render list ──
 function renderList() {
   const filtered = filterLogs();
-
   countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
 
@@ -189,13 +198,13 @@ function renderList() {
   });
 
   if (logs.length === 0) {
-    statusText.textContent = isAttached ? 'Attached, waiting…' : 'Not attached';
+    statusText.textContent = 'Listening…';
   } else {
     statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
   }
 }
 
-// ── Pilih log ──
+// ── Select log ──
 function selectLog(idx) {
   if (idx === null || idx >= logs.length) {
     selectedId = null;
@@ -212,14 +221,73 @@ function selectLog(idx) {
   renderDetail(idx);
 }
 
-// ── Update log property dan simpan ──
-async function updateLogProperty(idx, property, value) {
-  if (idx === null || idx >= logs.length) return;
-  logs[idx] = { ...logs[idx], [property]: value };
-  await saveLogs();
-  if (selectedId === idx) {
-    renderDetail(idx);
-  }
+// ── CAPTURE REQUEST (TANPA FILTER, SEMUA REQUEST MASUK) ──
+function startCapture() {
+  console.log('[BrutuSuite] Memulai capture via chrome.devtools.network');
+
+  chrome.devtools.network.onRequestFinished.addListener(async (request) => {
+    console.log('[BrutuSuite] Request tertangkap:', request.request.url, 'type:', request.type);
+
+    // Request headers
+    const reqHeaders = {};
+    request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
+
+    // Request body
+    const postData = request.request.postData || '';
+
+    // Response body
+    let responseBody = '';
+    try {
+      const content = await new Promise((resolve, reject) => {
+        request.getContent((body, encoding) => {
+          if (encoding === 'base64') {
+            resolve(body);
+          } else {
+            resolve(body);
+          }
+        });
+      });
+      responseBody = content;
+    } catch (e) {
+      console.warn('[BrutuSuite] Gagal ambil response body:', e);
+      responseBody = '';
+    }
+
+    // Response headers
+    const respHeaders = {};
+    request.response.headers.forEach(h => { respHeaders[h.name] = h.value; });
+
+    const log = {
+      time: new Date().toLocaleTimeString(),
+      url: request.request.url,
+      status: request.response.status,
+      statusText: request.response.statusText || '',
+      mime: request.response.mimeType || '',
+      method: request.request.method || 'GET',
+      requestHeaders: reqHeaders,
+      requestBody: postData,
+      response: responseBody,
+      responseHeaders: respHeaders,
+      note: '',
+      queryParams: [],
+      bodyMode: 'none',
+      bodyRawType: 'text',
+      formDataFields: [],
+      auth: { type: 'none' }
+    };
+
+    logs.unshift(log);
+    if (logs.length > MAX_LOGS) logs.pop();
+    await saveLogs();
+    renderList();
+
+    if (selectedId === null) {
+      selectLog(0);
+    } else {
+      selectedId += 1;
+      renderDetail(selectedId);
+    }
+  });
 }
 
 // ── Render detail ──
@@ -239,7 +307,7 @@ function renderDetail(idx) {
   const isSending = (sendingId === idx);
 
   if (!log.queryParams) log.queryParams = [];
-  if (!log.bodyMode) log.bodyMode = 'raw';
+  if (!log.bodyMode) log.bodyMode = 'none';
   if (!log.bodyRawType) log.bodyRawType = 'text';
   if (!log.formDataFields) log.formDataFields = [];
   if (!log.auth) log.auth = { type: 'none' };
@@ -440,6 +508,7 @@ function renderDetail(idx) {
   }
 }
 
+// ── Subtab render functions ──
 function renderParamsSubtab(log, idx) {
   const params = log.queryParams || [];
   let html = `<div class="sub-panel ${activeSubTab === 'params' ? 'active' : ''}" data-subpanel="params">
@@ -613,24 +682,14 @@ function renderBodySubtab(log, idx) {
   return html;
 }
 
-function buildUrlWithParams(log) {
-  let url = log.url || '';
-  const params = log.queryParams || [];
-  const qs = params.filter(p => p.key.trim()).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
-  if (qs) {
-    const separator = url.includes('?') ? '&' : '?';
-    url = url + separator + qs;
-  }
-  return url;
-}
-
+// ── Attach subtab events ──
 function attachSubtabEvents(idx) {
   const log = logs[idx];
   if (!log) return;
 
+  // ── Params ──
   const paramRows = document.querySelectorAll('.params-row:not(.header-row)');
   const paramAdd = document.querySelector('.param-add');
-  const paramContainer = document.querySelector('.params-table');
 
   paramRows.forEach(row => {
     const keyInput = row.querySelector('.param-key');
@@ -711,6 +770,7 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── Auth ──
   const authType = document.getElementById('auth-type');
   if (authType) {
     authType.addEventListener('change', () => {
@@ -824,6 +884,7 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── Headers ──
   const headersContainer = document.getElementById('headers-container');
   if (headersContainer) {
     headersContainer.addEventListener('click', (e) => {
@@ -857,6 +918,7 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── Body ──
   const bodyMode = document.getElementById('body-mode');
   if (bodyMode) {
     bodyMode.addEventListener('change', () => {
@@ -894,6 +956,7 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── Form Data ──
   const formContainer = document.querySelector('.form-data-fields');
   if (formContainer) {
     const addFormBtn = formContainer.querySelector('.form-add');
@@ -927,6 +990,7 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── URL Encoded ──
   const urlencodedContainer = document.querySelector('.urlencoded-fields');
   if (urlencodedContainer) {
     const addUrlencodedBtn = urlencodedContainer.querySelector('.urlencoded-add');
@@ -959,6 +1023,7 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── Method & URL ──
   const methodSelect = document.getElementById('edit-method');
   const urlInput = document.getElementById('edit-url');
   if (methodSelect) {
@@ -1076,6 +1141,7 @@ function attachUrlencodedRowEvents(row, idx) {
   if (rmBtn) rmBtn.addEventListener('click', update);
 }
 
+// ── Send Request ──
 async function sendRequest(idx) {
   if (sendingId !== null) return;
   const log = logs[idx];
@@ -1209,6 +1275,7 @@ async function sendRequest(idx) {
   }
 }
 
+// ── Copy cURL ──
 function copyAsCurl(idx) {
   const log = logs[idx];
   if (!log) return;
@@ -1255,9 +1322,9 @@ function generateCurl(log) {
   return parts.join(' \\\n  ');
 }
 
+// ── Refresh ──
 async function refresh() {
-  const result = await chrome.storage.local.get('logs');
-  logs = result.logs || [];
+  await loadLogs();
   renderList();
   if (selectedId !== null && !logs[selectedId]) {
     selectedId = null;
@@ -1272,45 +1339,22 @@ async function refresh() {
   }
 }
 
-async function autoAttach() {
-  try {
-    const tabId = chrome.devtools.inspectedWindow.tabId;
-    const res = await chrome.runtime.sendMessage({ action: 'attach', tabId });
-    if (res?.success) {
-      isAttached = true;
-      statusText.textContent = `Attached to tab ${tabId}`;
-    }
-  } catch (e) {
-    statusText.textContent = 'Attach error';
-  }
-}
-
+// ── Event listeners ──
 searchInput.addEventListener('input', renderList);
 filterMethod.addEventListener('change', renderList);
 filterStatus.addEventListener('change', renderList);
 filterContent.addEventListener('input', renderList);
 
 document.getElementById('clear').onclick = async () => {
-  const res = await chrome.runtime.sendMessage({ action: 'clear' });
-  if (res?.success) {
-    logs = [];
-    selectedId = null;
-    editingId = null;
-    sendingId = null;
-    renderList();
-    detailEmpty.style.display = 'block';
-    detailContent.style.display = 'none';
-    statusText.textContent = 'Cleared';
-  }
-};
-
-document.getElementById('attach').onclick = async () => {
-  const tabId = chrome.devtools.inspectedWindow.tabId;
-  const res = await chrome.runtime.sendMessage({ action: 'attach', tabId });
-  if (res?.success) {
-    isAttached = true;
-    statusText.textContent = `Attached to tab ${tabId}`;
-  }
+  logs = [];
+  selectedId = null;
+  editingId = null;
+  sendingId = null;
+  await saveLogs();
+  renderList();
+  detailEmpty.style.display = 'block';
+  detailContent.style.display = 'none';
+  statusText.textContent = 'Cleared';
 };
 
 chrome.storage.onChanged.addListener((changes, ns) => {
@@ -1319,7 +1363,10 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   }
 });
 
+// ── INIT ──
 (async function init() {
   await refresh();
-  await autoAttach();
+  startCapture();
+  statusText.textContent = 'Listening…';
+  console.log('[BrutuSuite] Panel siap, menunggu request...');
 })();
