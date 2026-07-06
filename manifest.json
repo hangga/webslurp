@@ -2,20 +2,14 @@
   "manifest_version": 3,
   "name": "BrutuSuite",
   "description": "Intercept, inspect, modify & replay API requests",
-  "version": "1.0",
+  "version": "1.1",
   "permissions": [
     "storage",
-    "tabs",
-    "activeTab",
-    "debugger",
-    "cookies"
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "devtools_page": "devtools.html",
   "action": {
     "default_title": "Brutu Suite",

@@ -1,10 +1,12 @@
+// ── STATE ──
 let logs = [];
 let selectedId = null;
 let editingId = null;
 let sendingId = null;
-let isAttached = false;
-let activeTab = 'request'; // 'request' | 'response'
-let activeSubTab = 'params'; // 'params' | 'auth' | 'headers' | 'body'
+let activeTab = 'request';
+let activeSubTab = 'params';
+const MAX_LOGS = 200;
+let ignoreStorageChange = false;
 
 // ── DOM refs ──
 const logListEl = document.getElementById('log-list');
@@ -21,24 +23,11 @@ const divider = document.getElementById('divider');
 
 // ── Resize divider ──
 let isDragging = false;
-
-let ignoreStorageChange = false;
-
-async function saveLogs() {
-  ignoreStorageChange = true;
-  try {
-    await chrome.storage.local.set({ logs });
-  } finally {
-    ignoreStorageChange = false;
-  }
-}
-
 divider.addEventListener('mousedown', (e) => {
   isDragging = true;
   document.body.style.cursor = 'col-resize';
   document.body.style.userSelect = 'none';
 });
-
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   const rect = document.getElementById('split-view').getBoundingClientRect();
@@ -46,7 +35,6 @@ document.addEventListener('mousemove', (e) => {
   const percentage = Math.min(Math.max((x / rect.width) * 100, 15), 85);
   logListEl.style.width = percentage + '%';
 });
-
 document.addEventListener('mouseup', () => {
   if (isDragging) {
     isDragging = false;
@@ -83,7 +71,6 @@ function statusClass(code) {
   return 'status-5xx';
 }
 
-// ── headersToArray: support object & array ──
 function headersToArray(headers) {
   if (!headers) return [];
   if (Array.isArray(headers)) {
@@ -106,7 +93,6 @@ function headersToObject(arr) {
   return obj;
 }
 
-// ── Validasi URL ──
 function ensureValidUrl(url) {
   url = url.trim();
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -115,9 +101,7 @@ function ensureValidUrl(url) {
   return url;
 }
 
-// ── Bersihkan header (hapus yang tidak valid) ──
 function cleanHeaders(headers) {
-  // Header yang dikelola otomatis oleh browser, tidak boleh dikirim manual
   const forbidden = [
     'host', 'content-length', 'connection', 'keep-alive',
     'transfer-encoding', 'upgrade', 'via', 'proxy-connection'
@@ -125,10 +109,10 @@ function cleanHeaders(headers) {
   const cleaned = {};
   for (const [key, value] of Object.entries(headers)) {
     const trimmedKey = key.trim();
-    if (!trimmedKey) continue;                      // key kosong
-    if (trimmedKey.startsWith(':')) continue;      // pseudo-header (HTTP/2)
-    if (/[\s:]/.test(trimmedKey)) continue;        // mengandung spasi atau titik dua
-    if (/[\x00-\x1f\x7f]/.test(trimmedKey)) continue; // karakter kontrol
+    if (!trimmedKey) continue;
+    if (trimmedKey.startsWith(':')) continue;
+    if (/[\s:]/.test(trimmedKey)) continue;
+    if (/[\x00-\x1f\x7f]/.test(trimmedKey)) continue;
     const lowerKey = trimmedKey.toLowerCase();
     if (forbidden.includes(lowerKey)) continue;
     const val = (value !== undefined && value !== null) ? String(value) : '';
@@ -137,7 +121,33 @@ function cleanHeaders(headers) {
   return cleaned;
 }
 
-// ── Filter logs ──
+function buildUrlWithParams(log) {
+  let url = log.url || '';
+  const params = log.queryParams || [];
+  const qs = params.filter(p => p.key.trim()).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
+  if (qs) {
+    const separator = url.includes('?') ? '&' : '?';
+    url = url + separator + qs;
+  }
+  return url;
+}
+
+// ── Storage ──
+async function saveLogs() {
+  ignoreStorageChange = true;
+  try {
+    await chrome.storage.local.set({ logs });
+  } finally {
+    ignoreStorageChange = false;
+  }
+}
+
+async function loadLogs() {
+  const result = await chrome.storage.local.get('logs');
+  logs = result.logs || [];
+}
+
+// ── Filter ──
 function filterLogs() {
   const keyword = searchInput.value.toLowerCase().trim();
   const method = filterMethod.value;
@@ -162,10 +172,9 @@ function filterLogs() {
   });
 }
 
-// ── Render daftar ──
+// ── Render list ──
 function renderList() {
   const filtered = filterLogs();
-
   countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
 
@@ -189,13 +198,13 @@ function renderList() {
   });
 
   if (logs.length === 0) {
-    statusText.textContent = isAttached ? 'Attached, waiting…' : 'Not attached';
+    statusText.textContent = 'Listening…';
   } else {
     statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
   }
 }
 
-// ── Pilih log ──
+// ── Select log ──
 function selectLog(idx) {
   if (idx === null || idx >= logs.length) {
     selectedId = null;
@@ -212,14 +221,70 @@ function selectLog(idx) {
   renderDetail(idx);
 }
 
-// ── Update log property dan simpan ──
-async function updateLogProperty(idx, property, value) {
-  if (idx === null || idx >= logs.length) return;
-  logs[idx] = { ...logs[idx], [property]: value };
-  await saveLogs();
-  if (selectedId === idx) {
-    renderDetail(idx);
-  }
+// ── CAPTURE REQUEST (menggunakan chrome.devtools.network) ──
+function startCapture() {
+  console.log('[BrutuSuite] Memulai capture via chrome.devtools.network');
+
+  chrome.devtools.network.onRequestFinished.addListener(async (request) => {
+    // Tangkap SEMUA request (termasuk gambar, CSS, dll) agar mudah debug
+    console.log('[BrutuSuite] Request tertangkap:', request.request.url, 'type:', request.type);
+
+    // Request headers
+    const reqHeaders = {};
+    request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
+
+    // Request body
+    const postData = request.request.postData || '';
+
+    // Response body
+    let responseBody = '';
+    try {
+      const content = await new Promise((resolve) => {
+        request.getContent((body, encoding) => {
+          resolve(body);
+        });
+      });
+      responseBody = content;
+    } catch (e) {
+      console.warn('[BrutuSuite] Gagal ambil response body:', e);
+      responseBody = '';
+    }
+
+    // Response headers
+    const respHeaders = {};
+    request.response.headers.forEach(h => { respHeaders[h.name] = h.value; });
+
+    const log = {
+      time: new Date().toLocaleTimeString(),
+      url: request.request.url,
+      status: request.response.status,
+      statusText: request.response.statusText || '',
+      mime: request.response.mimeType || '',
+      method: request.request.method || 'GET',
+      requestHeaders: reqHeaders,
+      requestBody: postData,
+      response: responseBody,
+      responseHeaders: respHeaders,
+      note: '',
+      queryParams: [],
+      bodyMode: 'none',
+      bodyRawType: 'text',
+      formDataFields: [],
+      auth: { type: 'none' }
+    };
+
+    logs.unshift(log);
+    if (logs.length > MAX_LOGS) logs.pop();
+    await saveLogs();
+    renderList();
+
+    if (selectedId === null) {
+      selectLog(0);
+    } else {
+      selectedId += 1;
+      renderDetail(selectedId);
+    }
+  });
 }
 
 // ── Render detail ──
@@ -239,7 +304,7 @@ function renderDetail(idx) {
   const isSending = (sendingId === idx);
 
   if (!log.queryParams) log.queryParams = [];
-  if (!log.bodyMode) log.bodyMode = 'raw';
+  if (!log.bodyMode) log.bodyMode = 'none';
   if (!log.bodyRawType) log.bodyRawType = 'text';
   if (!log.formDataFields) log.formDataFields = [];
   if (!log.auth) log.auth = { type: 'none' };
@@ -267,39 +332,24 @@ function renderDetail(idx) {
   html += `</div>`;
 
   html += `<div class="detail-tabs">
-    <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">
-      Request
-    </button>
-    <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">
-      Response
-      ${log.status ? `<span class="badge">${log.status}</span>` : ''}
-    </button>
+    <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
+    <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
   </div>`;
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
   if (isEditing) {
     html += `<div class="request-meta">
-      <div class="method-wrap">
-        <select id="edit-method">
-          ${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m =>
-            `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`
-          ).join('')}
-        </select>
-      </div>
-      <div class="url-wrap">
-        <input type="text" id="edit-url" value="${escapeHtml(log.url)}" />
-      </div>
+      <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>
     </div>`;
   } else {
     const sc = log.status ? statusClass(log.status) : '';
-    html += `<div class="request-meta">
-      <div class="readonly-meta">
-        <span class="method-label">${log.method || 'GET'}</span>
-        <span class="url-label">${escapeHtml(log.url)}</span>
-        ${log.status ? `<span class="status-badge ${sc}">${log.status}</span>` : ''}
-      </div>
-    </div>`;
+    html += `<div class="request-meta"><div class="readonly-meta">
+      <span class="method-label">${log.method || 'GET'}</span>
+      <span class="url-label">${escapeHtml(log.url)}</span>
+      ${log.status ? `<span class="status-badge ${sc}">${log.status}</span>` : ''}
+    </div></div>`;
   }
 
   if (isEditing) {
@@ -308,36 +358,26 @@ function renderDetail(idx) {
       <button class="sub-tab ${activeSubTab === 'auth' ? 'active' : ''}" data-subtab="auth">Auth</button>
       <button class="sub-tab ${activeSubTab === 'headers' ? 'active' : ''}" data-subtab="headers">Headers</button>
       <button class="sub-tab ${activeSubTab === 'body' ? 'active' : ''}" data-subtab="body">Body</button>
+    </div>
+    <div class="sub-content">
+      ${renderParamsSubtab(log)}
+      ${renderAuthSubtab(log)}
+      ${renderHeadersSubtab(log)}
+      ${renderBodySubtab(log)}
     </div>`;
-
-    html += `<div class="sub-content">`;
-    html += renderParamsSubtab(log, idx);
-    html += renderAuthSubtab(log, idx);
-    html += renderHeadersSubtab(log, idx);
-    html += renderBodySubtab(log, idx);
-    html += `</div>`;
   } else {
     html += `<div class="readonly-detail">`;
     const headersArr = headersToArray(log.requestHeaders || {});
     html += `<div class="ro-section"><label>Headers</label>`;
     if (headersArr.length) {
-      headersArr.forEach(h => {
-        html += `<div class="ro-row"><span class="ro-key">${escapeHtml(h.key)}</span><span class="ro-value">${escapeHtml(h.value)}</span></div>`;
-      });
-    } else {
-      html += `<div class="ro-empty">(no headers)</div>`;
-    }
+      headersArr.forEach(h => html += `<div class="ro-row"><span class="ro-key">${escapeHtml(h.key)}</span><span class="ro-value">${escapeHtml(h.value)}</span></div>`);
+    } else html += `<div class="ro-empty">(no headers)</div>`;
     html += `</div>`;
     html += `<div class="ro-section"><label>Body</label>`;
-    if (log.requestBody) {
-      html += `<div class="ro-body">${formatOutput(log.requestBody)}</div>`;
-    } else {
-      html += `<div class="ro-empty">(no body)</div>`;
-    }
-    html += `</div>`;
-    html += `</div>`;
+    if (log.requestBody) html += `<div class="ro-body">${formatOutput(log.requestBody)}</div>`;
+    else html += `<div class="ro-empty">(no body)</div>`;
+    html += `</div></div>`;
   }
-
   html += `</div>`;
 
   html += `<div class="tab-panel ${activeTab === 'response' ? 'active' : ''}" data-panel="response">`;
@@ -349,109 +389,56 @@ function renderDetail(idx) {
       ${log.response ? `<span class="rsize">📦 ${(log.response.length / 1024).toFixed(1)} KB</span>` : ''}
       <span class="rbadge">${log.mime || 'unknown'}</span>
     </div>`;
-
     const respHeaders = headersToArray(log.responseHeaders || {});
-    html += `<div class="response-headers">
-      <label>Response Headers</label>
-      <div class="rheaders-container">`;
-    if (respHeaders.length) {
-      respHeaders.forEach(h => {
-        html += `<div class="rh-row">
-          <span class="rh-key">${escapeHtml(h.key)}</span>
-          <span class="rh-value">${escapeHtml(h.value)}</span>
-        </div>`;
-      });
-    } else {
-      html += `<div style="padding:6px 10px;color:#666;font-style:italic;font-size:12px;">(no headers)</div>`;
-    }
+    html += `<div class="response-headers"><label>Response Headers</label><div class="rheaders-container">`;
+    if (respHeaders.length) respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
+    else html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
     html += `</div></div>`;
-
-    html += `<div class="response-body">
-      <label>Response Body</label>
-      <div class="rb-content">${log.response ? formatOutput(log.response) : '<span class="empty-hint">(empty)</span>'}</div>
-    </div>`;
+    html += `<div class="response-body"><label>Response Body</label><div class="rb-content">${log.response ? formatOutput(log.response) : '<span class="empty-hint">(empty)</span>'}</div></div>`;
   } else {
     html += `<div style="color:#666;padding:20px 0;text-align:center;font-style:italic;">No response yet</div>`;
   }
   html += `</div>`;
 
-  html += `<div class="note-area">
-    <label>📝 Note</label>
-    <textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea>
-  </div>`;
+  html += `<div class="note-area"><label>📝 Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
 
   detailContent.innerHTML = html;
 
-  detailContent.querySelectorAll('.detail-tab').forEach(tab => {
-    tab.addEventListener('click', function(e) {
-      const tabName = this.dataset.tab;
-      if (tabName && tabName !== activeTab) {
-        activeTab = tabName;
-        renderDetail(idx);
-      }
-    });
-  });
-
-  detailContent.querySelectorAll('.sub-tab').forEach(tab => {
-    tab.addEventListener('click', function(e) {
-      const subTab = this.dataset.subtab;
-      if (subTab && subTab !== activeSubTab) {
-        activeSubTab = subTab;
-        renderDetail(idx);
-      }
-    });
-  });
+  // ── Event binding ──
+  detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
+    const tabName = this.dataset.tab;
+    if (tabName && tabName !== activeTab) { activeTab = tabName; renderDetail(idx); }
+  }));
+  detailContent.querySelectorAll('.sub-tab').forEach(tab => tab.addEventListener('click', function(e) {
+    const subTab = this.dataset.subtab;
+    if (subTab && subTab !== activeSubTab) { activeSubTab = subTab; renderDetail(idx); }
+  }));
 
   const editBtn = detailContent.querySelector('#action-edit');
-  if (editBtn) {
-    editBtn.addEventListener('click', () => {
-      editingId = idx;
-      renderDetail(idx);
-    });
-  }
+  if (editBtn) editBtn.addEventListener('click', () => { editingId = idx; renderDetail(idx); });
   const cancelBtn = detailContent.querySelector('#action-cancel');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => {
-      editingId = null;
-      renderDetail(idx);
-    });
-  }
+  if (cancelBtn) cancelBtn.addEventListener('click', () => { editingId = null; renderDetail(idx); });
   const sendBtn = detailContent.querySelector('#action-send');
-  if (sendBtn) {
-    sendBtn.addEventListener('click', () => sendRequest(idx));
-  }
+  if (sendBtn) sendBtn.addEventListener('click', () => sendRequest(idx));
   const copyBtn = detailContent.querySelector('#action-copy');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => copyAsCurl(idx));
-  }
+  if (copyBtn) copyBtn.addEventListener('click', () => copyAsCurl(idx));
 
   const noteTextarea = document.getElementById('log-note');
-  if (noteTextarea) {
-    noteTextarea.addEventListener('input', () => {
-      const newNote = noteTextarea.value;
-      logs[idx].note = newNote;
-      saveLogs();
-      renderList();
-    });
-  }
+  if (noteTextarea) noteTextarea.addEventListener('input', () => {
+    logs[idx].note = noteTextarea.value;
+    saveLogs();
+    renderList();
+  });
 
-  if (isEditing) {
-    attachSubtabEvents(idx);
-  }
+  if (isEditing) attachSubtabEvents(idx);
 }
 
-function renderParamsSubtab(log, idx) {
+// ── SUBTAB RENDER FUNCTIONS ──
+function renderParamsSubtab(log) {
   const params = log.queryParams || [];
   let html = `<div class="sub-panel ${activeSubTab === 'params' ? 'active' : ''}" data-subpanel="params">
-    <div class="params-table">
-      <div class="params-row header-row">
-        <span class="pkey">Key</span>
-        <span class="pvalue">Value</span>
-        <span class="paction"></span>
-      </div>`;
-  if (params.length === 0) {
-    params.push({ key: '', value: '' });
-  }
+    <div class="params-table"><div class="params-row header-row"><span class="pkey">Key</span><span class="pvalue">Value</span><span class="paction"></span></div>`;
+  if (params.length === 0) params.push({ key: '', value: '' });
   params.forEach((p, i) => {
     html += `<div class="params-row" data-pindex="${i}">
       <div class="pkey"><input class="param-key" value="${escapeHtml(p.key)}" placeholder="Key" /></div>
@@ -459,52 +446,38 @@ function renderParamsSubtab(log, idx) {
       <div class="paction"><button class="param-remove" data-pindex="${i}" ${params.length === 1 ? 'disabled' : ''}>×</button></div>
     </div>`;
   });
-  html += `<button class="param-add">+ Add Parameter</button>
-    </div>
+  html += `<button class="param-add">+ Add Parameter</button></div>
     <div class="params-preview">URL preview: <span id="url-preview">${escapeHtml(buildUrlWithParams(log))}</span></div>
   </div>`;
   return html;
 }
 
-function renderAuthSubtab(log, idx) {
+function renderAuthSubtab(log) {
   const auth = log.auth || { type: 'none' };
   let html = `<div class="sub-panel ${activeSubTab === 'auth' ? 'active' : ''}" data-subpanel="auth">
-    <div class="auth-row">
-      <label>Auth Type</label>
-      <select id="auth-type">
-        <option value="none" ${auth.type === 'none' ? 'selected' : ''}>None</option>
-        <option value="basic" ${auth.type === 'basic' ? 'selected' : ''}>Basic Auth</option>
-        <option value="bearer" ${auth.type === 'bearer' ? 'selected' : ''}>Bearer Token</option>
-        <option value="oauth2" ${auth.type === 'oauth2' ? 'selected' : ''}>OAuth 2.0</option>
-      </select>
-    </div>`;
-
+    <div class="auth-row"><label>Auth Type</label><select id="auth-type">
+      <option value="none" ${auth.type === 'none' ? 'selected' : ''}>None</option>
+      <option value="basic" ${auth.type === 'basic' ? 'selected' : ''}>Basic Auth</option>
+      <option value="bearer" ${auth.type === 'bearer' ? 'selected' : ''}>Bearer Token</option>
+      <option value="oauth2" ${auth.type === 'oauth2' ? 'selected' : ''}>OAuth 2.0</option>
+    </select></div>`;
   if (auth.type === 'basic') {
-    html += `<div class="auth-fields">
-      <div class="auth-row"><label>Username</label><input id="auth-basic-username" value="${escapeHtml(auth.username || '')}" /></div>
-      <div class="auth-row"><label>Password</label><input id="auth-basic-password" type="password" value="${escapeHtml(auth.password || '')}" /></div>
-    </div>`;
+    html += `<div class="auth-fields"><div class="auth-row"><label>Username</label><input id="auth-basic-username" value="${escapeHtml(auth.username || '')}" /></div>
+    <div class="auth-row"><label>Password</label><input id="auth-basic-password" type="password" value="${escapeHtml(auth.password || '')}" /></div></div>`;
   } else if (auth.type === 'bearer') {
-    html += `<div class="auth-fields">
-      <div class="auth-row"><label>Token</label><input id="auth-bearer-token" value="${escapeHtml(auth.token || '')}" /></div>
-    </div>`;
+    html += `<div class="auth-fields"><div class="auth-row"><label>Token</label><input id="auth-bearer-token" value="${escapeHtml(auth.token || '')}" /></div></div>`;
   } else if (auth.type === 'oauth2') {
     const grantType = auth.grantType || 'client_credentials';
     html += `<div class="auth-fields">
-      <div class="auth-row"><label>Grant Type</label>
-        <select id="auth-oauth2-grant">
-          <option value="client_credentials" ${grantType === 'client_credentials' ? 'selected' : ''}>Client Credentials</option>
-          <option value="password" ${grantType === 'password' ? 'selected' : ''}>Password Grant</option>
-        </select>
-      </div>
+      <div class="auth-row"><label>Grant Type</label><select id="auth-oauth2-grant">
+        <option value="client_credentials" ${grantType === 'client_credentials' ? 'selected' : ''}>Client Credentials</option>
+        <option value="password" ${grantType === 'password' ? 'selected' : ''}>Password Grant</option>
+      </select></div>
       <div class="auth-row"><label>Token URL</label><input id="auth-oauth2-tokenurl" value="${escapeHtml(auth.tokenUrl || '')}" /></div>
       <div class="auth-row"><label>Client ID</label><input id="auth-oauth2-clientid" value="${escapeHtml(auth.clientId || '')}" /></div>
       <div class="auth-row"><label>Client Secret</label><input id="auth-oauth2-clientsecret" type="password" value="${escapeHtml(auth.clientSecret || '')}" /></div>
       <div class="auth-row"><label>Scope</label><input id="auth-oauth2-scope" value="${escapeHtml(auth.scope || '')}" /></div>
-      ${grantType === 'password' ? `
-        <div class="auth-row"><label>Username</label><input id="auth-oauth2-username" value="${escapeHtml(auth.username || '')}" /></div>
-        <div class="auth-row"><label>Password</label><input id="auth-oauth2-password" type="password" value="${escapeHtml(auth.password || '')}" /></div>
-      ` : ''}
+      ${grantType === 'password' ? `<div class="auth-row"><label>Username</label><input id="auth-oauth2-username" value="${escapeHtml(auth.username || '')}" /></div><div class="auth-row"><label>Password</label><input id="auth-oauth2-password" type="password" value="${escapeHtml(auth.password || '')}" /></div>` : ''}
       <div class="auth-row"><label>Access Token</label><input id="auth-oauth2-accesstoken" value="${escapeHtml(auth.accessToken || '')}" /></div>
       <div class="auth-row"><button id="auth-oauth2-fetch-token" class="btn secondary">Get Access Token</button></div>
     </div>`;
@@ -513,15 +486,10 @@ function renderAuthSubtab(log, idx) {
   return html;
 }
 
-function renderHeadersSubtab(log, idx) {
+function renderHeadersSubtab(log) {
   const headersArr = headersToArray(log.requestHeaders || {});
   let html = `<div class="sub-panel ${activeSubTab === 'headers' ? 'active' : ''}" data-subpanel="headers">
-    <div class="headers-table" id="headers-container">
-      <div class="headers-row header-row">
-        <span class="hkey">Key</span>
-        <span class="hvalue">Value</span>
-        <span class="haction"></span>
-      </div>`;
+    <div class="headers-table" id="headers-container"><div class="headers-row header-row"><span class="hkey">Key</span><span class="hvalue">Value</span><span class="haction"></span></div>`;
   const rows = headersArr.length ? headersArr : [{ key: '', value: '' }];
   rows.forEach((h, i) => {
     html += `<div class="headers-row" data-hindex="${i}">
@@ -530,74 +498,43 @@ function renderHeadersSubtab(log, idx) {
       <div class="haction"><button class="header-remove" data-hindex="${i}" ${rows.length === 1 ? 'disabled' : ''}>×</button></div>
     </div>`;
   });
-  html += `<button class="header-add">+ Add Header</button>
-    </div>
-  </div>`;
+  html += `<button class="header-add">+ Add Header</button></div></div>`;
   return html;
 }
 
-function renderBodySubtab(log, idx) {
+function renderBodySubtab(log) {
   const mode = log.bodyMode || 'none';
   const rawType = log.bodyRawType || 'text';
   const formFields = log.formDataFields || [];
   let html = `<div class="sub-panel ${activeSubTab === 'body' ? 'active' : ''}" data-subpanel="body">
-    <div class="body-mode-row">
-      <label>Body Mode</label>
-      <select id="body-mode">
-        <option value="none" ${mode === 'none' ? 'selected' : ''}>None</option>
-        <option value="form-data" ${mode === 'form-data' ? 'selected' : ''}>Form Data</option>
-        <option value="x-www-form-urlencoded" ${mode === 'x-www-form-urlencoded' ? 'selected' : ''}>x-www-form-urlencoded</option>
-        <option value="raw" ${mode === 'raw' ? 'selected' : ''}>Raw</option>
-      </select>
-    </div>`;
-
+    <div class="body-mode-row"><label>Body Mode</label><select id="body-mode">
+      <option value="none" ${mode === 'none' ? 'selected' : ''}>None</option>
+      <option value="form-data" ${mode === 'form-data' ? 'selected' : ''}>Form Data</option>
+      <option value="x-www-form-urlencoded" ${mode === 'x-www-form-urlencoded' ? 'selected' : ''}>x-www-form-urlencoded</option>
+      <option value="raw" ${mode === 'raw' ? 'selected' : ''}>Raw</option>
+    </select></div>`;
   if (mode === 'raw') {
-    html += `<div class="body-raw-row">
-      <label>Raw Type</label>
-      <select id="body-raw-type">
-        <option value="text" ${rawType === 'text' ? 'selected' : ''}>Text</option>
-        <option value="json" ${rawType === 'json' ? 'selected' : ''}>JSON</option>
-        <option value="xml" ${rawType === 'xml' ? 'selected' : ''}>XML</option>
-      </select>
-    </div>
-    <div class="body-textarea-row">
-      <textarea id="edit-body" rows="6">${escapeHtml(log.requestBody || '')}</textarea>
-    </div>`;
+    html += `<div class="body-raw-row"><label>Raw Type</label><select id="body-raw-type">
+      <option value="text" ${rawType === 'text' ? 'selected' : ''}>Text</option>
+      <option value="json" ${rawType === 'json' ? 'selected' : ''}>JSON</option>
+      <option value="xml" ${rawType === 'xml' ? 'selected' : ''}>XML</option>
+    </select></div>
+    <div class="body-textarea-row"><textarea id="edit-body" rows="6">${escapeHtml(log.requestBody || '')}</textarea></div>`;
   } else if (mode === 'form-data') {
-    html += `<div class="form-data-fields">
-      <div class="form-row header-row">
-        <span class="fkey">Key</span>
-        <span class="fvalue">Value</span>
-        <span class="ftype">Type</span>
-        <span class="faction"></span>
-      </div>`;
-    if (formFields.length === 0) {
-      formFields.push({ key: '', value: '', type: 'text' });
-    }
+    html += `<div class="form-data-fields"><div class="form-row header-row"><span class="fkey">Key</span><span class="fvalue">Value</span><span class="ftype">Type</span><span class="faction"></span></div>`;
+    if (formFields.length === 0) formFields.push({ key: '', value: '', type: 'text' });
     formFields.forEach((f, i) => {
       const isFile = f.type === 'file';
       html += `<div class="form-row" data-findex="${i}">
         <div class="fkey"><input class="form-key" value="${escapeHtml(f.key)}" placeholder="Key" /></div>
-        <div class="fvalue">${isFile ? 
-          `<input class="form-file" type="file" />` : 
-          `<input class="form-text" value="${escapeHtml(f.value)}" placeholder="Value" />`}
-        </div>
-        <div class="ftype"><select class="form-type">
-          <option value="text" ${!isFile ? 'selected' : ''}>Text</option>
-          <option value="file" ${isFile ? 'selected' : ''}>File</option>
-        </select></div>
+        <div class="fvalue">${isFile ? `<input class="form-file" type="file" />` : `<input class="form-text" value="${escapeHtml(f.value)}" placeholder="Value" />`}</div>
+        <div class="ftype"><select class="form-type"><option value="text" ${!isFile ? 'selected' : ''}>Text</option><option value="file" ${isFile ? 'selected' : ''}>File</option></select></div>
         <div class="faction"><button class="form-remove" data-findex="${i}" ${formFields.length === 1 ? 'disabled' : ''}>×</button></div>
       </div>`;
     });
-    html += `<button class="form-add">+ Add Field</button>
-    </div>`;
+    html += `<button class="form-add">+ Add Field</button></div>`;
   } else if (mode === 'x-www-form-urlencoded') {
-    html += `<div class="urlencoded-fields">
-      <div class="urlencoded-row header-row">
-        <span class="ukey">Key</span>
-        <span class="uvalue">Value</span>
-        <span class="uaction"></span>
-      </div>`;
+    html += `<div class="urlencoded-fields"><div class="urlencoded-row header-row"><span class="ukey">Key</span><span class="uvalue">Value</span><span class="uaction"></span></div>`;
     const fields = formFields.length ? formFields : [{ key: '', value: '' }];
     fields.forEach((f, i) => {
       html += `<div class="urlencoded-row" data-uindex="${i}">
@@ -606,152 +543,76 @@ function renderBodySubtab(log, idx) {
         <div class="uaction"><button class="urlencoded-remove" data-uindex="${i}" ${fields.length === 1 ? 'disabled' : ''}>×</button></div>
       </div>`;
     });
-    html += `<button class="urlencoded-add">+ Add Field</button>
-    </div>`;
+    html += `<button class="urlencoded-add">+ Add Field</button></div>`;
   }
   html += `</div>`;
   return html;
 }
 
-function buildUrlWithParams(log) {
-  let url = log.url || '';
-  const params = log.queryParams || [];
-  const qs = params.filter(p => p.key.trim()).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
-  if (qs) {
-    const separator = url.includes('?') ? '&' : '?';
-    url = url + separator + qs;
-  }
-  return url;
-}
-
+// ── ATTACH EVENTS UNTUK SUBTAB EDITING ──
 function attachSubtabEvents(idx) {
   const log = logs[idx];
   if (!log) return;
 
+  // ── Params ──
   const paramRows = document.querySelectorAll('.params-row:not(.header-row)');
   const paramAdd = document.querySelector('.param-add');
-  const paramContainer = document.querySelector('.params-table');
-
+  const updateParams = () => {
+    const params = [];
+    document.querySelectorAll('.params-row:not(.header-row)').forEach(r => {
+      const k = r.querySelector('.param-key').value.trim();
+      const v = r.querySelector('.param-value').value;
+      if (k) params.push({ key: k, value: v });
+    });
+    log.queryParams = params;
+    const preview = document.getElementById('url-preview');
+    if (preview) preview.textContent = buildUrlWithParams(log);
+    const urlInput = document.getElementById('edit-url');
+    if (urlInput) { const newUrl = buildUrlWithParams(log); log.url = newUrl; urlInput.value = newUrl; }
+    saveLogs();
+  };
   paramRows.forEach(row => {
-    const keyInput = row.querySelector('.param-key');
-    const valInput = row.querySelector('.param-value');
-    const removeBtn = row.querySelector('.param-remove');
-    const update = () => {
-      const params = [];
-      document.querySelectorAll('.params-row:not(.header-row)').forEach(r => {
-        const k = r.querySelector('.param-key').value.trim();
-        const v = r.querySelector('.param-value').value;
-        if (k) params.push({ key: k, value: v });
-      });
-      log.queryParams = params;
-      const preview = document.getElementById('url-preview');
-      if (preview) preview.textContent = buildUrlWithParams(log);
-      const urlInput = document.getElementById('edit-url');
-      if (urlInput) {
-        const newUrl = buildUrlWithParams(log);
-        log.url = newUrl;
-        urlInput.value = newUrl;
-      }
-      saveLogs();
-    };
-    if (keyInput) keyInput.addEventListener('input', update);
-    if (valInput) valInput.addEventListener('input', update);
-    if (removeBtn) {
-      removeBtn.addEventListener('click', () => {
-        const rows = document.querySelectorAll('.params-row:not(.header-row)');
-        if (rows.length <= 1) return;
-        row.remove();
-        update();
-      });
-    }
+    row.querySelector('.param-key').addEventListener('input', updateParams);
+    row.querySelector('.param-value').addEventListener('input', updateParams);
+    row.querySelector('.param-remove').addEventListener('click', () => {
+      if (document.querySelectorAll('.params-row:not(.header-row)').length <= 1) return;
+      row.remove();
+      updateParams();
+    });
   });
-
   if (paramAdd) {
     paramAdd.addEventListener('click', () => {
       const container = document.querySelector('.params-table');
       const row = document.createElement('div');
       row.className = 'params-row';
-      row.innerHTML = `
-        <div class="pkey"><input class="param-key" placeholder="Key" /></div>
-        <div class="pvalue"><input class="param-value" placeholder="Value" /></div>
-        <div class="paction"><button class="param-remove">×</button></div>
-      `;
+      row.innerHTML = `<div class="pkey"><input class="param-key" placeholder="Key" /></div><div class="pvalue"><input class="param-value" placeholder="Value" /></div><div class="paction"><button class="param-remove">×</button></div>`;
       container.insertBefore(row, paramAdd);
-      container.querySelectorAll('.param-remove').forEach(b => b.disabled = false);
       attachSubtabEvents(idx);
-      const keyInput = row.querySelector('.param-key');
-      const valInput = row.querySelector('.param-value');
-      const update = () => {
-        const params = [];
-        document.querySelectorAll('.params-row:not(.header-row)').forEach(r => {
-          const k = r.querySelector('.param-key').value.trim();
-          const v = r.querySelector('.param-value').value;
-          if (k) params.push({ key: k, value: v });
-        });
-        log.queryParams = params;
-        const preview = document.getElementById('url-preview');
-        if (preview) preview.textContent = buildUrlWithParams(log);
-        const urlInput = document.getElementById('edit-url');
-        if (urlInput) {
-          const newUrl = buildUrlWithParams(log);
-          log.url = newUrl;
-          urlInput.value = newUrl;
-        }
-        saveLogs();
-      };
-      keyInput.addEventListener('input', update);
-      valInput.addEventListener('input', update);
-      row.querySelector('.param-remove').addEventListener('click', () => {
-        const rows = document.querySelectorAll('.params-row:not(.header-row)');
-        if (rows.length <= 1) return;
-        row.remove();
-        update();
-      });
-      update();
+      updateParams();
     });
   }
 
+  // ── Auth ──
   const authType = document.getElementById('auth-type');
   if (authType) {
     authType.addEventListener('change', () => {
       log.auth.type = authType.value;
-      if (authType.value === 'none') {
-        log.auth = { type: 'none' };
-      } else if (authType.value === 'basic') {
-        log.auth = { type: 'basic', username: '', password: '' };
-      } else if (authType.value === 'bearer') {
-        log.auth = { type: 'bearer', token: '' };
-      } else if (authType.value === 'oauth2') {
-        log.auth = { type: 'oauth2', grantType: 'client_credentials', tokenUrl: '', clientId: '', clientSecret: '', scope: '', accessToken: '' };
-      }
+      if (authType.value === 'none') log.auth = { type: 'none' };
+      else if (authType.value === 'basic') log.auth = { type: 'basic', username: '', password: '' };
+      else if (authType.value === 'bearer') log.auth = { type: 'bearer', token: '' };
+      else if (authType.value === 'oauth2') log.auth = { type: 'oauth2', grantType: 'client_credentials', tokenUrl: '', clientId: '', clientSecret: '', scope: '', accessToken: '' };
       saveLogs();
       renderDetail(idx);
     });
   }
-
   const basicUsername = document.getElementById('auth-basic-username');
   const basicPassword = document.getElementById('auth-basic-password');
-  if (basicUsername) {
-    basicUsername.addEventListener('input', () => {
-      log.auth.username = basicUsername.value;
-      saveLogs();
-    });
-  }
-  if (basicPassword) {
-    basicPassword.addEventListener('input', () => {
-      log.auth.password = basicPassword.value;
-      saveLogs();
-    });
-  }
-
+  if (basicUsername) basicUsername.addEventListener('input', () => { log.auth.username = basicUsername.value; saveLogs(); });
+  if (basicPassword) basicPassword.addEventListener('input', () => { log.auth.password = basicPassword.value; saveLogs(); });
   const bearerToken = document.getElementById('auth-bearer-token');
-  if (bearerToken) {
-    bearerToken.addEventListener('input', () => {
-      log.auth.token = bearerToken.value;
-      saveLogs();
-    });
-  }
+  if (bearerToken) bearerToken.addEventListener('input', () => { log.auth.token = bearerToken.value; saveLogs(); });
 
+  // OAuth2
   const oauth2Grant = document.getElementById('auth-oauth2-grant');
   const oauth2TokenUrl = document.getElementById('auth-oauth2-tokenurl');
   const oauth2ClientId = document.getElementById('auth-oauth2-clientid');
@@ -767,14 +628,7 @@ function attachSubtabEvents(idx) {
     log.auth[field] = value;
     saveLogs();
   };
-
-  if (oauth2Grant) {
-    oauth2Grant.addEventListener('change', () => {
-      log.auth.grantType = oauth2Grant.value;
-      saveLogs();
-      renderDetail(idx);
-    });
-  }
+  if (oauth2Grant) oauth2Grant.addEventListener('change', () => { log.auth.grantType = oauth2Grant.value; saveLogs(); renderDetail(idx); });
   if (oauth2TokenUrl) oauth2TokenUrl.addEventListener('input', () => saveOAuth2Field('tokenUrl', oauth2TokenUrl.value));
   if (oauth2ClientId) oauth2ClientId.addEventListener('input', () => saveOAuth2Field('clientId', oauth2ClientId.value));
   if (oauth2ClientSecret) oauth2ClientSecret.addEventListener('input', () => saveOAuth2Field('clientSecret', oauth2ClientSecret.value));
@@ -786,10 +640,7 @@ function attachSubtabEvents(idx) {
   if (fetchTokenBtn) {
     fetchTokenBtn.addEventListener('click', async () => {
       const auth = log.auth;
-      if (!auth.tokenUrl) {
-        statusText.textContent = 'Token URL is required';
-        return;
-      }
+      if (!auth.tokenUrl) { statusText.textContent = 'Token URL is required'; return; }
       const body = new URLSearchParams();
       body.append('grant_type', auth.grantType);
       if (auth.grantType === 'client_credentials') {
@@ -824,76 +675,53 @@ function attachSubtabEvents(idx) {
     });
   }
 
+  // ── Headers ──
   const headersContainer = document.getElementById('headers-container');
   if (headersContainer) {
     headersContainer.addEventListener('click', (e) => {
-      const rmBtn = e.target.closest('.header-remove');
-      if (!rmBtn) return;
-      const row = rmBtn.closest('.headers-row');
-      if (!row) return;
-      const rows = headersContainer.querySelectorAll('.headers-row:not(.header-row)');
-      if (rows.length <= 1) return;
-      row.remove();
-      updateHeadersFromUI(idx);
+      if (e.target.classList.contains('header-remove')) {
+        const row = e.target.closest('.headers-row');
+        if (document.querySelectorAll('#headers-container .headers-row:not(.header-row)').length <= 1) return;
+        row.remove();
+        updateHeadersFromUI(idx);
+      }
     });
     const addBtn = headersContainer.querySelector('.header-add');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         const row = document.createElement('div');
         row.className = 'headers-row';
-        row.innerHTML = `
-          <div class="hkey"><input class="header-key" placeholder="Key" /></div>
-          <div class="hvalue"><input class="header-value" placeholder="Value" /></div>
-          <div class="haction"><button class="header-remove">×</button></div>
-        `;
+        row.innerHTML = `<div class="hkey"><input class="header-key" placeholder="Key" /></div><div class="hvalue"><input class="header-value" placeholder="Value" /></div><div class="haction"><button class="header-remove">×</button></div>`;
         headersContainer.insertBefore(row, addBtn);
-        headersContainer.querySelectorAll('.header-remove').forEach(b => b.disabled = false);
-        attachHeaderEvents(row, idx);
+        attachSubtabEvents(idx);
         updateHeadersFromUI(idx);
       });
     }
     headersContainer.querySelectorAll('.headers-row:not(.header-row)').forEach(row => {
-      attachHeaderEvents(row, idx);
+      row.querySelector('.header-key').addEventListener('input', () => updateHeadersFromUI(idx));
+      row.querySelector('.header-value').addEventListener('input', () => updateHeadersFromUI(idx));
     });
   }
 
+  // ── Body ──
   const bodyMode = document.getElementById('body-mode');
   if (bodyMode) {
     bodyMode.addEventListener('change', () => {
       log.bodyMode = bodyMode.value;
-      if (bodyMode.value === 'none') {
-        log.requestBody = '';
-        log.formDataFields = [];
-      } else if (bodyMode.value === 'form-data') {
-        log.formDataFields = log.formDataFields || [];
-        if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '', type: 'text' }];
-      } else if (bodyMode.value === 'x-www-form-urlencoded') {
-        log.formDataFields = log.formDataFields || [];
-        if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '' }];
-      } else if (bodyMode.value === 'raw') {
-        log.requestBody = log.requestBody || '';
-      }
+      if (bodyMode.value === 'none') { log.requestBody = ''; log.formDataFields = []; }
+      else if (bodyMode.value === 'form-data') { log.formDataFields = log.formDataFields || []; if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '', type: 'text' }]; }
+      else if (bodyMode.value === 'x-www-form-urlencoded') { log.formDataFields = log.formDataFields || []; if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '' }]; }
+      else if (bodyMode.value === 'raw') { log.requestBody = log.requestBody || ''; }
       saveLogs();
       renderDetail(idx);
     });
   }
-
   const bodyRawType = document.getElementById('body-raw-type');
-  if (bodyRawType) {
-    bodyRawType.addEventListener('change', () => {
-      log.bodyRawType = bodyRawType.value;
-      saveLogs();
-    });
-  }
-
+  if (bodyRawType) bodyRawType.addEventListener('change', () => { log.bodyRawType = bodyRawType.value; saveLogs(); });
   const bodyTextarea = document.getElementById('edit-body');
-  if (bodyTextarea) {
-    bodyTextarea.addEventListener('input', () => {
-      log.requestBody = bodyTextarea.value;
-      saveLogs();
-    });
-  }
+  if (bodyTextarea) bodyTextarea.addEventListener('input', () => { log.requestBody = bodyTextarea.value; saveLogs(); });
 
+  // ── Form Data ──
   const formContainer = document.querySelector('.form-data-fields');
   if (formContainer) {
     const addFormBtn = formContainer.querySelector('.form-add');
@@ -901,14 +729,9 @@ function attachSubtabEvents(idx) {
       addFormBtn.addEventListener('click', () => {
         const row = document.createElement('div');
         row.className = 'form-row';
-        row.innerHTML = `
-          <div class="fkey"><input class="form-key" placeholder="Key" /></div>
-          <div class="fvalue"><input class="form-text" placeholder="Value" /></div>
-          <div class="ftype"><select class="form-type"><option value="text" selected>Text</option><option value="file">File</option></select></div>
-          <div class="faction"><button class="form-remove">×</button></div>
-        `;
+        row.innerHTML = `<div class="fkey"><input class="form-key" placeholder="Key" /></div><div class="fvalue"><input class="form-text" placeholder="Value" /></div><div class="ftype"><select class="form-type"><option value="text" selected>Text</option><option value="file">File</option></select></div><div class="faction"><button class="form-remove">×</button></div>`;
         formContainer.insertBefore(row, addFormBtn);
-        attachFormRowEvents(row, idx);
+        attachSubtabEvents(idx);
         updateFormFieldsFromUI(idx);
       });
     }
@@ -916,17 +739,16 @@ function attachSubtabEvents(idx) {
       attachFormRowEvents(row, idx);
     });
     formContainer.addEventListener('click', (e) => {
-      const rmBtn = e.target.closest('.form-remove');
-      if (!rmBtn) return;
-      const row = rmBtn.closest('.form-row');
-      if (!row) return;
-      const rows = formContainer.querySelectorAll('.form-row:not(.header-row)');
-      if (rows.length <= 1) return;
-      row.remove();
-      updateFormFieldsFromUI(idx);
+      if (e.target.classList.contains('form-remove')) {
+        const row = e.target.closest('.form-row');
+        if (document.querySelectorAll('.form-row:not(.header-row)').length <= 1) return;
+        row.remove();
+        updateFormFieldsFromUI(idx);
+      }
     });
   }
 
+  // ── URL Encoded ──
   const urlencodedContainer = document.querySelector('.urlencoded-fields');
   if (urlencodedContainer) {
     const addUrlencodedBtn = urlencodedContainer.querySelector('.urlencoded-add');
@@ -934,13 +756,9 @@ function attachSubtabEvents(idx) {
       addUrlencodedBtn.addEventListener('click', () => {
         const row = document.createElement('div');
         row.className = 'urlencoded-row';
-        row.innerHTML = `
-          <div class="ukey"><input class="urlencoded-key" placeholder="Key" /></div>
-          <div class="uvalue"><input class="urlencoded-value" placeholder="Value" /></div>
-          <div class="uaction"><button class="urlencoded-remove">×</button></div>
-        `;
+        row.innerHTML = `<div class="ukey"><input class="urlencoded-key" placeholder="Key" /></div><div class="uvalue"><input class="urlencoded-value" placeholder="Value" /></div><div class="uaction"><button class="urlencoded-remove">×</button></div>`;
         urlencodedContainer.insertBefore(row, addUrlencodedBtn);
-        attachUrlencodedRowEvents(row, idx);
+        attachSubtabEvents(idx);
         updateUrlencodedFromUI(idx);
       });
     }
@@ -948,33 +766,20 @@ function attachSubtabEvents(idx) {
       attachUrlencodedRowEvents(row, idx);
     });
     urlencodedContainer.addEventListener('click', (e) => {
-      const rmBtn = e.target.closest('.urlencoded-remove');
-      if (!rmBtn) return;
-      const row = rmBtn.closest('.urlencoded-row');
-      if (!row) return;
-      const rows = urlencodedContainer.querySelectorAll('.urlencoded-row:not(.header-row)');
-      if (rows.length <= 1) return;
-      row.remove();
-      updateUrlencodedFromUI(idx);
+      if (e.target.classList.contains('urlencoded-remove')) {
+        const row = e.target.closest('.urlencoded-row');
+        if (document.querySelectorAll('.urlencoded-row:not(.header-row)').length <= 1) return;
+        row.remove();
+        updateUrlencodedFromUI(idx);
+      }
     });
   }
 
+  // ── Method & URL ──
   const methodSelect = document.getElementById('edit-method');
   const urlInput = document.getElementById('edit-url');
-  if (methodSelect) {
-    methodSelect.addEventListener('change', () => {
-      log.method = methodSelect.value;
-      saveLogs();
-    });
-  }
-  if (urlInput) {
-    urlInput.addEventListener('input', () => {
-      log.url = urlInput.value;
-      saveLogs();
-      const preview = document.getElementById('url-preview');
-      if (preview) preview.textContent = buildUrlWithParams(log);
-    });
-  }
+  if (methodSelect) methodSelect.addEventListener('change', () => { log.method = methodSelect.value; saveLogs(); });
+  if (urlInput) urlInput.addEventListener('input', () => { log.url = urlInput.value; saveLogs(); const preview = document.getElementById('url-preview'); if (preview) preview.textContent = buildUrlWithParams(log); });
 }
 
 function updateHeadersFromUI(idx) {
@@ -988,15 +793,6 @@ function updateHeadersFromUI(idx) {
   });
   log.requestHeaders = headersToObject(headers);
   saveLogs();
-}
-
-function attachHeaderEvents(row, idx) {
-  const keyInput = row.querySelector('.header-key');
-  const valInput = row.querySelector('.header-value');
-  const rmBtn = row.querySelector('.header-remove');
-  if (keyInput) keyInput.addEventListener('input', () => updateHeadersFromUI(idx));
-  if (valInput) valInput.addEventListener('input', () => updateHeadersFromUI(idx));
-  if (rmBtn) rmBtn.addEventListener('click', () => updateHeadersFromUI(idx));
 }
 
 function updateFormFieldsFromUI(idx) {
@@ -1029,7 +825,6 @@ function attachFormRowEvents(row, idx) {
   const fileInput = row.querySelector('.form-file');
   const typeSelect = row.querySelector('.form-type');
   const rmBtn = row.querySelector('.form-remove');
-
   const update = () => updateFormFieldsFromUI(idx);
   if (keyInput) keyInput.addEventListener('input', update);
   if (valInput) valInput.addEventListener('input', update);
@@ -1076,6 +871,7 @@ function attachUrlencodedRowEvents(row, idx) {
   if (rmBtn) rmBtn.addEventListener('click', update);
 }
 
+// ── Send Request ──
 async function sendRequest(idx) {
   if (sendingId !== null) return;
   const log = logs[idx];
@@ -1116,47 +912,28 @@ async function sendRequest(idx) {
 
   if (mode === 'raw') {
     const rawType = log.bodyRawType || 'text';
-    if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
-    } else if (rawType === 'xml' && !headers['content-type'] && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/xml';
-    }
-    if (body && method !== 'GET' && method !== 'HEAD') {
-      fetchOptions.body = body;
-    }
+    if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+    else if (rawType === 'xml' && !headers['content-type'] && !headers['Content-Type']) headers['Content-Type'] = 'application/xml';
+    if (body && method !== 'GET' && method !== 'HEAD') fetchOptions.body = body;
   } else if (mode === 'form-data') {
     const formData = new FormData();
-    const fields = log.formDataFields || [];
-    fields.forEach(f => {
+    (log.formDataFields || []).forEach(f => {
       if (f.type === 'file') {
-        if (f.fileObj && f.fileObj instanceof File) {
-          formData.append(f.key, f.fileObj, f.fileObj.name);
-        } else if (f.value) {
-          formData.append(f.key, f.value);
-        }
-      } else {
-        formData.append(f.key, f.value || '');
-      }
+        if (f.fileObj && f.fileObj instanceof File) formData.append(f.key, f.fileObj, f.fileObj.name);
+        else if (f.value) formData.append(f.key, f.value);
+      } else formData.append(f.key, f.value || '');
     });
     fetchOptions.body = formData;
     delete headers['Content-Type'];
     delete headers['content-type'];
   } else if (mode === 'x-www-form-urlencoded') {
     const params = new URLSearchParams();
-    const fields = log.formDataFields || [];
-    fields.forEach(f => {
-      if (f.key) params.append(f.key, f.value || '');
-    });
+    (log.formDataFields || []).forEach(f => { if (f.key) params.append(f.key, f.value || ''); });
     fetchOptions.body = params.toString();
-    if (!headers['content-type'] && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    }
+    if (!headers['content-type'] && !headers['Content-Type']) headers['Content-Type'] = 'application/x-www-form-urlencoded';
   }
 
-  if (method === 'GET' || method === 'HEAD') {
-    delete fetchOptions.body;
-  }
-
+  if (method === 'GET' || method === 'HEAD') delete fetchOptions.body;
   fetchOptions.headers = headers;
   url = ensureValidUrl(url);
 
@@ -1209,21 +986,13 @@ async function sendRequest(idx) {
   }
 }
 
+// ── Copy cURL ──
 function copyAsCurl(idx) {
   const log = logs[idx];
   if (!log) return;
   const curl = generateCurl(log);
-  navigator.clipboard.writeText(curl).then(() => {
-    statusText.textContent = 'cURL copied!';
-  }).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = curl;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    statusText.textContent = 'cURL copied!';
-  });
+  navigator.clipboard.writeText(curl).then(() => statusText.textContent = 'cURL copied!')
+    .catch(() => { const ta = document.createElement('textarea'); ta.value = curl; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); statusText.textContent = 'cURL copied!'; });
 }
 
 function generateCurl(log) {
@@ -1232,21 +1001,14 @@ function generateCurl(log) {
   const headers = log.requestHeaders || {};
   const body = log.requestBody || '';
   let parts = [`curl -X ${method}`];
-  
   let cookieHeader = '';
   for (const [k, v] of Object.entries(headers)) {
     const keyLower = k.toLowerCase();
-    if (keyLower === 'cookie') {
-      cookieHeader = v;
-      continue;
-    }
+    if (keyLower === 'cookie') { cookieHeader = v; continue; }
     if (keyLower === 'host') continue;
     parts.push(`-H "${k}: ${v.replace(/"/g, '\\"')}"`);
   }
-  if (cookieHeader) {
-    parts.push(`-b "${cookieHeader.replace(/"/g, '\\"')}"`);
-  }
-  
+  if (cookieHeader) parts.push(`-b "${cookieHeader.replace(/"/g, '\\"')}"`);
   if (body && method !== 'GET' && method !== 'HEAD') {
     const escaped = body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     parts.push(`-d "${escaped}"`);
@@ -1255,9 +1017,9 @@ function generateCurl(log) {
   return parts.join(' \\\n  ');
 }
 
+// ── Refresh ──
 async function refresh() {
-  const result = await chrome.storage.local.get('logs');
-  logs = result.logs || [];
+  await loadLogs();
   renderList();
   if (selectedId !== null && !logs[selectedId]) {
     selectedId = null;
@@ -1272,45 +1034,22 @@ async function refresh() {
   }
 }
 
-async function autoAttach() {
-  try {
-    const tabId = chrome.devtools.inspectedWindow.tabId;
-    const res = await chrome.runtime.sendMessage({ action: 'attach', tabId });
-    if (res?.success) {
-      isAttached = true;
-      statusText.textContent = `Attached to tab ${tabId}`;
-    }
-  } catch (e) {
-    statusText.textContent = 'Attach error';
-  }
-}
-
+// ── Event listeners ──
 searchInput.addEventListener('input', renderList);
 filterMethod.addEventListener('change', renderList);
 filterStatus.addEventListener('change', renderList);
 filterContent.addEventListener('input', renderList);
 
 document.getElementById('clear').onclick = async () => {
-  const res = await chrome.runtime.sendMessage({ action: 'clear' });
-  if (res?.success) {
-    logs = [];
-    selectedId = null;
-    editingId = null;
-    sendingId = null;
-    renderList();
-    detailEmpty.style.display = 'block';
-    detailContent.style.display = 'none';
-    statusText.textContent = 'Cleared';
-  }
-};
-
-document.getElementById('attach').onclick = async () => {
-  const tabId = chrome.devtools.inspectedWindow.tabId;
-  const res = await chrome.runtime.sendMessage({ action: 'attach', tabId });
-  if (res?.success) {
-    isAttached = true;
-    statusText.textContent = `Attached to tab ${tabId}`;
-  }
+  logs = [];
+  selectedId = null;
+  editingId = null;
+  sendingId = null;
+  await saveLogs();
+  renderList();
+  detailEmpty.style.display = 'block';
+  detailContent.style.display = 'none';
+  statusText.textContent = 'Cleared';
 };
 
 chrome.storage.onChanged.addListener((changes, ns) => {
@@ -1319,7 +1058,10 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   }
 });
 
+// ── INIT ──
 (async function init() {
   await refresh();
-  await autoAttach();
+  startCapture();
+  statusText.textContent = 'Listening…';
+  console.log('[BrutuSuite] Panel siap, menunggu request...');
 })();
