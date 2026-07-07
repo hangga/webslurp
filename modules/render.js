@@ -1,7 +1,7 @@
 import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          setSelectedId, setEditingId, setActiveTab, setActiveSubTab,
          logListEl, detailEmpty, detailContent, countBadge, statusText, statusCount,
-         expandedGroups, toggleGroup,  // <-- import tambahan
+         expandedGroups, toggleGroup,
          MAX_LOGS } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, buildUrlWithParams, bodyToJson } from './helpers.js';
 import { saveLogs } from './storage.js';
@@ -9,7 +9,6 @@ import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
 import { sendRequest, copyAsCurl } from './network.js';
 
-// ── Render list ──
 // ── Render list (grouped by hostname) ──
 export function renderList() {
   const filtered = filterLogs();
@@ -52,11 +51,11 @@ export function renderList() {
       if (isExpanded) {
         body.classList.add('collapsed');
         toggle.textContent = '▶  ';
-        expandedGroups.delete(hostname);  // simpan state
+        expandedGroups.delete(hostname);
       } else {
         body.classList.remove('collapsed');
         toggle.textContent = '▼  ';
-        expandedGroups.add(hostname);     // simpan state
+        expandedGroups.add(hostname);
       }
     });
     groupDiv.appendChild(header);
@@ -64,7 +63,6 @@ export function renderList() {
     // Body
     const body = document.createElement('div');
     body.className = 'group-body';
-    // Terapkan state expand dari memory
     if (expandedGroups.has(hostname)) {
       body.classList.remove('collapsed');
       header.querySelector('.group-toggle').textContent = '▼ ';
@@ -104,20 +102,21 @@ export function renderList() {
 export function selectLog(idx) {
   if (idx === null || idx >= logs.length) {
     setSelectedId(null);
+    // Tidak perlu setEditingId
     detailEmpty.style.display = 'block';
     detailContent.style.display = 'none';
     renderList();
     return;
   }
   setSelectedId(idx);
-  setEditingId(null);
+  // editingId diabaikan – selalu mode edit
   setActiveTab('request');
   setActiveSubTab('params');
   renderList();
   renderDetail(idx);
 }
 
-// ── renderDetail (lanjutan di bawah) ──
+// ── renderDetail (selalu dalam mode edit untuk request) ──
 export function renderDetail(idx) {
   const log = logs[idx];
   if (!log) {
@@ -130,7 +129,6 @@ export function renderDetail(idx) {
   detailContent.style.display = 'flex';
   detailContent.className = 'active';
 
-  const isEditing = (editingId === idx);
   const isSending = (sendingId === idx);
 
   if (!log.queryParams) log.queryParams = [];
@@ -142,17 +140,12 @@ export function renderDetail(idx) {
 
   let html = '';
 
-  // ── ACTIONS (tidak diubah) ──
+  // ── ACTIONS ──
   html += `<div class="detail-actions">`;
-  if (isEditing) {
-    html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
-      ${isSending ? '⏳ Sending...' : '▶ Send'}
-    </button>
-    <button class="btn btn-cancel" id="action-cancel" ${isSending ? 'disabled' : ''}>Cancel</button>`;
-  } else {
-    html += `<button class="btn btn-edit" id="action-edit">✎ Edit</button>
-    <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
-  }
+  html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+    ${isSending ? '⏳ Sending...' : '▶ Send'}
+  </button>`;
+  html += `<button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
   if (isSending) {
     html += `<div class="send-status sending"><span class="spinner"></span> Sending...</div>`;
   } else if (log.sendStatus) {
@@ -170,107 +163,27 @@ export function renderDetail(idx) {
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
-  // ── Request meta (tidak diubah) ──
-  if (isEditing) {
-    html += `<div class="request-meta">
-      <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
-      <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>
-    </div>`;
-  } else {
-    const sc = log.status ? statusClass(log.status) : '';
-    html += `<div class="request-meta"><div class="readonly-meta">
-      <span class="method-label">${log.method || 'GET'}</span>
-      <span class="url-label">${escapeHtml(log.url)}</span>
-      ${log.status ? `<span class="status-badge ${sc}">${log.status}</span>` : ''}
-    </div></div>`;
-  }
+  // ── Request meta (selalu editable) ──
+  html += `<div class="request-meta">
+    <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+    <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>
+  </div>`;
 
-  // ── Sub-tabs (edit mode only) ──
-  if (isEditing) {
-    html += `<div class="sub-tabs">
-      <button class="sub-tab ${activeSubTab === 'params' ? 'active' : ''}" data-subtab="params">Params</button>
-      <button class="sub-tab ${activeSubTab === 'auth' ? 'active' : ''}" data-subtab="auth">Auth</button>
-      <button class="sub-tab ${activeSubTab === 'headers' ? 'active' : ''}" data-subtab="headers">Headers</button>
-      <button class="sub-tab ${activeSubTab === 'body' ? 'active' : ''}" data-subtab="body">Body</button>
-    </div>
-    <div class="sub-content">
-      ${renderParamsSubtab(log)}
-      ${renderAuthSubtab(log)}
-      ${renderHeadersSubtab(log)}
-      ${renderBodySubtab(log)}
-    </div>`;
-  } else {
-    // ── Readonly detail ──
-    html += `<div class="readonly-detail">`;
+  // ── Sub-tabs (selalu ditampilkan) ──
+  html += `<div class="sub-tabs">
+    <button class="sub-tab ${activeSubTab === 'params' ? 'active' : ''}" data-subtab="params">Params</button>
+    <button class="sub-tab ${activeSubTab === 'auth' ? 'active' : ''}" data-subtab="auth">Auth</button>
+    <button class="sub-tab ${activeSubTab === 'headers' ? 'active' : ''}" data-subtab="headers">Headers</button>
+    <button class="sub-tab ${activeSubTab === 'body' ? 'active' : ''}" data-subtab="body">Body</button>
+  </div>
+  <div class="sub-content">
+    ${renderParamsSubtab(log)}
+    ${renderAuthSubtab(log)}
+    ${renderHeadersSubtab(log)}
+    ${renderBodySubtab(log)}
+  </div>`;
 
-    // ── Headers ──
-    const headersArr = headersToArray(log.requestHeaders || {});
-    html += `<div class="ro-section"><label>Headers</label>`;
-    if (headersArr.length) {
-      headersArr.forEach(h => html += `<div class="ro-row"><span class="ro-key">${escapeHtml(h.key)}</span><span class="ro-value">${escapeHtml(h.value)}</span></div>`);
-    } else {
-      html += `<div class="ro-empty">(no headers)</div>`;
-    }
-    html += `</div>`;
-
-    // ── Query Parameters ──
-    const queryParams = log.queryParams || [];
-    html += `<div class="ro-section"><label>Query Parameters</label>`;
-    if (queryParams.length > 0 && queryParams.some(p => p.key.trim())) {
-      html += `<div class="ro-body">`;
-      queryParams.forEach(p => {
-        if (p.key.trim()) {
-          html += `<div class="ro-row"><span class="ro-key">${escapeHtml(p.key)}</span><span class="ro-value">${escapeHtml(p.value)}</span></div>`;
-        }
-      });
-      html += `</div>`;
-    } else {
-      html += `<div class="ro-empty">(no query params)</div>`;
-    }
-    html += `</div>`;
-
-    // ── Body ──
-    html += `<div class="ro-section"><label>Body</label>`;
-    const bodyMode = log.bodyMode || 'none';
-    const formFields = log.formDataFields || [];
-
-    if (bodyMode === 'form-data') {
-      if (formFields.length > 0 && formFields.some(f => f.key.trim())) {
-        html += `<div class="ro-body">`;
-        formFields.forEach(f => {
-          if (f.key.trim()) {
-            const val = f.type === 'file' ? `${escapeHtml(f.value)} (file)` : escapeHtml(f.value);
-            html += `<div class="ro-row"><span class="ro-key">${escapeHtml(f.key)}</span><span class="ro-value">${val}</span></div>`;
-          }
-        });
-        html += `</div>`;
-      } else {
-        html += `<div class="ro-empty">(no form-data fields)</div>`;
-      }
-    } else if (bodyMode === 'x-www-form-urlencoded') {
-      if (formFields.length > 0 && formFields.some(f => f.key.trim())) {
-        html += `<div class="ro-body">`;
-        formFields.forEach(f => {
-          if (f.key.trim()) {
-            html += `<div class="ro-row"><span class="ro-key">${escapeHtml(f.key)}</span><span class="ro-value">${escapeHtml(f.value)}</span></div>`;
-          }
-        });
-        html += `</div>`;
-      } else {
-        html += `<div class="ro-empty">(no urlencoded fields)</div>`;
-      }
-    } else if (bodyMode === 'raw') {
-      if (log.requestBody) {
-        html += `<div class="ro-body">${bodyToJson(log.requestBody)}</div>`;
-      } else {
-        html += `<div class="ro-empty">(no raw body)</div>`;
-      }
-    } else {
-      html += `<div class="ro-empty">(no body)</div>`;
-    }
-    html += `</div>`; // tutup readonly-detail
-  }
-  html += `</div>`;
+  html += `</div>`; // tutup panel request
 
   // ── Response panel ──
   html += `<div class="tab-panel ${activeTab === 'response' ? 'active' : ''}" data-panel="response">`;
@@ -284,7 +197,6 @@ export function renderDetail(idx) {
       <span class="rbadge">${log.mime || 'unknown'}</span>
     </div>`;
     const respHeaders = headersToArray(log.responseHeaders || {});
-    console.log('CEK-responseHeaders -----> ', log.responseHeaders)
     html += `<div class="response-headers"><label>Response Headers</label><div class="rheaders-container">`;
     if (respHeaders.length) respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
     else html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
@@ -300,7 +212,7 @@ export function renderDetail(idx) {
 
   detailContent.innerHTML = html;
 
-  // ── Event binding (tetap) ──
+  // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
     const tabName = this.dataset.tab;
     if (tabName && tabName !== activeTab) { setActiveTab(tabName); renderDetail(idx); }
@@ -310,15 +222,15 @@ export function renderDetail(idx) {
     if (subTab && subTab !== activeSubTab) { setActiveSubTab(subTab); renderDetail(idx); }
   }));
 
-  const editBtn = detailContent.querySelector('#action-edit');
-  if (editBtn) editBtn.addEventListener('click', () => { setEditingId(idx); renderDetail(idx); });
-  const cancelBtn = detailContent.querySelector('#action-cancel');
-  if (cancelBtn) cancelBtn.addEventListener('click', () => { setEditingId(null); renderDetail(idx); });
+  // Tombol Send
   const sendBtn = detailContent.querySelector('#action-send');
   if (sendBtn) sendBtn.addEventListener('click', () => sendRequest(idx));
+
+  // Tombol Copy cURL
   const copyBtn = detailContent.querySelector('#action-copy');
   if (copyBtn) copyBtn.addEventListener('click', () => copyAsCurl(idx));
 
+  // Note
   const noteTextarea = document.getElementById('log-note');
   if (noteTextarea) noteTextarea.addEventListener('input', () => {
     logs[idx].note = noteTextarea.value;
@@ -326,10 +238,11 @@ export function renderDetail(idx) {
     renderList();
   });
 
-  if (isEditing) attachSubtabEvents(idx);
+  // Selalu pasang event untuk subtab (update log saat input berubah)
+  attachSubtabEvents(idx);
 }
 
-// ── Subtab render functions ──
+// ── Subtab render functions (tidak berubah) ──
 export function renderParamsSubtab(log) {
   const params = log.queryParams || [];
   let html = `<div class="sub-panel ${activeSubTab === 'params' ? 'active' : ''}" data-subpanel="params">
@@ -399,7 +312,6 @@ export function renderHeadersSubtab(log) {
 }
 
 export function renderBodySubtab(log) {
-  // console.log('CEK-->renderBodySubtab->', log);
   const mode = log.bodyMode || 'none';
   const rawType = log.bodyRawType || 'text';
   const formFields = log.formDataFields || [];
@@ -411,7 +323,6 @@ export function renderBodySubtab(log) {
       <option value="raw" ${mode === 'raw' ? 'selected' : ''}>Raw</option>
     </select></div>`;
   if (mode === 'raw') {
-    console.log('CEK-->renderBodySubtab-> yak raw', log);
     html += `<div class="body-raw-row"><label>Raw Type</label><select id="body-raw-type">
       <option value="text" ${rawType === 'text' ? 'selected' : ''}>Text</option>
       <option value="json" ${rawType === 'json' ? 'selected' : ''}>JSON</option>
