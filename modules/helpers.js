@@ -8,6 +8,36 @@ export function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+export function bodyToJson(bodyRequest) {
+  if (!bodyRequest) return "";
+
+  try {
+    // Jika bodyRequest punya properti text yang berisi JSON
+    if (
+      typeof bodyRequest === "object" &&
+      typeof bodyRequest.text === "string"
+    ) {
+      return JSON.stringify(JSON.parse(bodyRequest.text), null, 2);
+    }
+
+    // Jika bodyRequest langsung berupa object
+    if (typeof bodyRequest === "object") {
+      return JSON.stringify(bodyRequest, null, 2);
+    }
+
+    // Jika berupa string JSON
+    if (typeof bodyRequest === "string") {
+      return JSON.stringify(JSON.parse(bodyRequest), null, 2);
+    }
+
+    return String(bodyRequest);
+  } catch {
+    return typeof bodyRequest === "object"
+      ? JSON.stringify(bodyRequest, null, 2)
+      : String(bodyRequest);
+  }
+}
+
 export function formatOutput(str) {
   str = String(str ?? '').trim();
   if (!str) return '';

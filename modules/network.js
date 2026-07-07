@@ -3,15 +3,64 @@ import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders } from './hel
 import { saveLogs } from './storage.js';
 import { renderList, renderDetail } from './render.js';
 
+// ── Deteksi body mode dari header dan postData ──
+function detectBodyInfo(postData, headers) {
+  const contentType = (headers['content-type'] || headers['Content-Type'] || '').toLowerCase();
+  let mode = 'none';
+  let rawType = 'text';
+  let formFields = [];
+  let requestBody = postData || '';
+
+  if (!postData) {
+    return { bodyMode: 'none', bodyRawType: 'text', formDataFields: [], requestBody: '' };
+  }
+
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    mode = 'x-www-form-urlencoded';
+    try {
+      const params = new URLSearchParams(postData);
+      for (const [key, value] of params) {
+        formFields.push({ key, value });
+      }
+    } catch (e) {
+      // parse gagal, biarkan kosong
+    }
+  } else if (contentType.includes('multipart/form-data')) {
+    // Untuk multipart, parsing manual cukup rumit. Kita tampilkan sebagai raw body.
+    // Tapi set mode raw agar body terlihat di detail dan copy curl.
+    mode = 'raw';
+    rawType = 'text';
+    requestBody = postData;
+  } else {
+    // JSON, XML, text, dll
+    mode = 'raw';
+    try {
+      JSON.parse(postData);
+      rawType = 'json';
+    } catch (e) {
+      if (contentType.includes('xml')) {
+        rawType = 'xml';
+      } else {
+        rawType = 'text';
+      }
+    }
+    requestBody = postData;
+  }
+
+  return { bodyMode: mode, bodyRawType: rawType, formDataFields: formFields, requestBody };
+}
+
 // ── CAPTURE REQUEST ──
 export function startCapture() {
   console.log('[BrutuSuite] Memulai capture via chrome.devtools.network');
 
   chrome.devtools.network.onRequestFinished.addListener(async (request) => {
-    console.log('[BrutuSuite] Request tertangkap:', request.request.url, 'type:', request.type);
+    // console.log('[BrutuSuite] Request tertangkap:', request.request.url, 'type:', request.type);
 
     const reqHeaders = {};
     request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
+
+    const queryData = request.request.queryData;
 
     const postData = request.request.postData || '';
 
@@ -28,8 +77,12 @@ export function startCapture() {
       responseBody = '';
     }
 
+    console.log('CEK responseBody ---------> ', responseBody);
+
     const respHeaders = {};
     request.response.headers.forEach(h => { respHeaders[h.name] = h.value; });
+
+    const bodyInfo = detectBodyInfo(postData, reqHeaders);
 
     const log = {
       time: new Date().toLocaleTimeString(),
@@ -39,13 +92,13 @@ export function startCapture() {
       mime: request.response.mimeType || '',
       method: request.request.method || 'GET',
       requestHeaders: reqHeaders,
-      requestBody: postData,
+      requestBody: bodyInfo.requestBody,
       response: responseBody,
       responseHeaders: respHeaders,
       note: '',
       queryParams: [],
-      bodyMode: 'none',
-      bodyRawType: 'text',
+      bodyMode: bodyInfo.bodyMode,
+      bodyRawType: bodyInfo.bodyRawType,
       formDataFields: [],
       auth: { type: 'none' }
     };
@@ -80,6 +133,10 @@ export async function sendRequest(idx) {
   let url = urlInput ? urlInput.value : log.url;
   let method = methodSelect ? methodSelect.value : (log.method || 'GET');
   let body = bodyTextarea ? bodyTextarea.value : (log.requestBody || '');
+  if (typeof body === 'function') {
+    try { body = body(); } catch (_) { body = ''; }
+  }
+  if (typeof body !== 'string') body = String(body);
 
   url = url.trim();
 
@@ -195,20 +252,62 @@ export function generateCurl(log) {
   const method = log.method || 'GET';
   const url = log.url;
   const headers = log.requestHeaders || {};
-  const body = log.requestBody || '';
+  const bodyMode = log.bodyMode || 'none';
+  const formFields = log.formDataFields || [];
+
   let parts = [`curl -X ${method}`];
+
+  // Headers
   let cookieHeader = '';
   for (const [k, v] of Object.entries(headers)) {
     const keyLower = k.toLowerCase();
     if (keyLower === 'cookie') { cookieHeader = v; continue; }
     if (keyLower === 'host') continue;
-    parts.push(`-H "${k}: ${v.replace(/"/g, '\\"')}"`);
+    const escapedValue = v.replace(/"/g, '\\"');
+    parts.push(`-H "${k}: ${escapedValue}"`);
   }
-  if (cookieHeader) parts.push(`-b "${cookieHeader.replace(/"/g, '\\"')}"`);
-  if (body && method !== 'GET' && method !== 'HEAD') {
-    const escaped = body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    parts.push(`-d "${escaped}"`);
+  if (cookieHeader) {
+    parts.push(`-b "${cookieHeader.replace(/"/g, '\\"')}"`);
   }
+
+  // Body handling
+  if (method !== 'GET' && method !== 'HEAD') {
+    if (bodyMode === 'form-data') {
+      formFields.forEach(f => {
+        if (f.key && f.key.trim()) {
+          const key = f.key.trim();
+          const value = (f.value || '').replace(/"/g, '\\"');
+          if (f.type === 'file' && f.value) {
+            parts.push(`-F "${key}=@${value}"`);
+          } else {
+            parts.push(`-F "${key}=${value}"`);
+          }
+        }
+      });
+    } else if (bodyMode === 'x-www-form-urlencoded') {
+      const params = new URLSearchParams();
+      formFields.forEach(f => {
+        if (f.key && f.key.trim()) {
+          params.append(f.key.trim(), f.value || '');
+        }
+      });
+      const data = params.toString();
+      if (data) {
+        // Escape backslash dan double quote
+        const escaped = data.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        parts.push(`--data-raw "${escaped}"`);
+      }
+    } else if (bodyMode === 'raw') {
+      const body = log.requestBody || '';
+      if (body) {
+        // Escape backslash dan double quote
+        // console.log('IKIH===>', body.text);
+        const escaped = body.text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        parts.push(`--data-raw "${escaped}"`);
+      }
+    }
+  }
+
   parts.push(`"${url}"`);
   return parts.join(' \\\n  ');
 }
