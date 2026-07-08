@@ -77,29 +77,29 @@ BrutuSuite keeps everything inside Chrome DevTools.
 Instead of:
 
 ```
-                    Browser
+                  Browser
                     ↓
-                    Copy Request
+                Copy Request
                     ↓
-                    Open Postman
+                Open Postman
                     ↓
-                    Import
+                  Import
                     ↓
-                    Edit
+                   Edit
                     ↓
-                    Send
+                   Send
 ```
 
 You simply:
 
 ```
-                    Chrome DevTools
+               Chrome DevTools
                     ↓
-                    Inspect
+                  Inspect
                     ↓
-                    Edit
+                   Edit
                     ↓
-                    Replay
+                   Replay
 ```
 
 No context switching.
