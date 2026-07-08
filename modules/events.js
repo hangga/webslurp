@@ -19,8 +19,8 @@ export function attachSubtabEvents(idx) {
       if (k) params.push({ key: k, value: v });
     });
     log.queryParams = params;
-    const preview = document.getElementById('url-preview');
-    if (preview) preview.textContent = buildUrlWithParams(log);
+    // const preview = document.getElementById('url-preview');
+    // if (preview) preview.textContent = buildUrlWithParams(log);
     const urlInput = document.getElementById('edit-url');
     if (urlInput) { const newUrl = buildUrlWithParams(log); log.url = newUrl; urlInput.value = newUrl; }
     saveLogs();
@@ -42,6 +42,32 @@ export function attachSubtabEvents(idx) {
       row.innerHTML = `<div class="pkey"><input class="param-key" placeholder="Key" /></div><div class="pvalue"><input class="param-value" placeholder="Value" /></div><div class="paction"><button class="param-remove">×</button></div>`;
       container.insertBefore(row, paramAdd);
       attachSubtabEvents(idx);
+      updateParams();
+    });
+  }
+
+  // Add
+  if (paramAdd) {
+    paramAdd.addEventListener("click", () => {
+      const row = document.createElement("div");
+
+      row.className = "params-row";
+      row.innerHTML = `
+        <div class="pkey">
+          <input class="param-key" placeholder="Key" />
+        </div>
+        <div class="pvalue">
+          <input class="param-value" placeholder="Value" />
+        </div>
+        <div class="paction">
+          <button class="param-remove">×</button>
+        </div>
+      `;
+
+      // paramTable.insertBefore(row, paramAdd);
+
+      row.querySelector(".param-key").focus();
+
       updateParams();
     });
   }

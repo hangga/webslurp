@@ -52,15 +52,20 @@ function detectBodyInfo(postData, headers) {
 
 // ── CAPTURE REQUEST ──
 export function startCapture() {
-  console.log('[BrutuSuite] Memulai capture via chrome.devtools.network');
-
   chrome.devtools.network.onRequestFinished.addListener(async (request) => {
     // console.log('[BrutuSuite] Request tertangkap:', request.request.url, 'type:', request.type);
 
     const reqHeaders = {};
     request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
 
-    const queryData = request.request.queryData;
+    // const queryParams = (request.request.queryString || []).map(param => ({
+    //   name: param.name,
+    //   value: param.value
+    // }));
+
+    const queryParams = (request.request.queryString || [])
+      .filter(({ name }) => name)
+      .map(({ name, value }) => ({ name, value }));
 
     const postData = request.request.postData || '';
 
@@ -76,8 +81,6 @@ export function startCapture() {
       console.warn('[BrutuSuite] Gagal ambil response body:', e);
       responseBody = '';
     }
-
-    console.log('CEK responseBody ---------> ', responseBody);
 
     const respHeaders = {};
     request.response.headers.forEach(h => { respHeaders[h.name] = h.value; });
@@ -96,7 +99,7 @@ export function startCapture() {
       response: responseBody,
       responseHeaders: respHeaders,
       note: '',
-      queryParams: [],
+      queryParams,
       bodyMode: bodyInfo.bodyMode,
       bodyRawType: bodyInfo.bodyRawType,
       formDataFields: [],
@@ -189,8 +192,6 @@ export async function sendRequest(idx) {
   if (method === 'GET' || method === 'HEAD') delete fetchOptions.body;
   fetchOptions.headers = headers;
   url = ensureValidUrl(url);
-
-  console.log('[BrutuSuite] Sending:', { url, method, headers, body: fetchOptions.body });
 
   setSendingId(idx);
   delete log.sendStatus;

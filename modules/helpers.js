@@ -8,34 +8,106 @@ export function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// export function bodyToJson(bodyRequest) {
+//   if (!bodyRequest) return "";
+
+//   try {
+//     // Jika bodyRequest punya properti text yang berisi JSON
+//     if (
+//       typeof bodyRequest === "object" &&
+//       typeof bodyRequest.text === "string"
+//     ) {
+//       return JSON.stringify(JSON.parse(bodyRequest.text), null, 2);
+//     }
+
+//     // Jika bodyRequest langsung berupa object
+//     if (typeof bodyRequest === "object") {
+//       return JSON.stringify(bodyRequest, null, 2);
+//     }
+
+//     // Jika berupa string JSON
+//     if (typeof bodyRequest === "string") {
+//       return JSON.stringify(JSON.parse(bodyRequest), null, 2);
+//     }
+
+//     return String(bodyRequest);
+//   } catch {
+//     return typeof bodyRequest === "object"
+//       ? JSON.stringify(bodyRequest, null, 2)
+//       : String(bodyRequest);
+//   }
+// }
+
 export function bodyToJson(bodyRequest) {
-  if (!bodyRequest) return "";
+  if (bodyRequest == null) return "";
 
   try {
-    // Jika bodyRequest punya properti text yang berisi JSON
+    let data = bodyRequest;
+
+    // chrome.devtools HAR
     if (
       typeof bodyRequest === "object" &&
       typeof bodyRequest.text === "string"
     ) {
-      return JSON.stringify(JSON.parse(bodyRequest.text), null, 2);
+      data = bodyRequest.text;
     }
 
-    // Jika bodyRequest langsung berupa object
+    if (typeof data === "string") {
+      data = JSON.parse(data);
+    }
+
+    data = deepParse(data);
+
+    return JSON.stringify(data, null, 2);
+  } catch {
     if (typeof bodyRequest === "object") {
-      return JSON.stringify(bodyRequest, null, 2);
-    }
-
-    // Jika berupa string JSON
-    if (typeof bodyRequest === "string") {
-      return JSON.stringify(JSON.parse(bodyRequest), null, 2);
+      try {
+        return JSON.stringify(bodyRequest, null, 2);
+      } catch {
+        return String(bodyRequest);
+      }
     }
 
     return String(bodyRequest);
-  } catch {
-    return typeof bodyRequest === "object"
-      ? JSON.stringify(bodyRequest, null, 2)
-      : String(bodyRequest);
   }
+}
+
+function deepParse(value) {
+  if (Array.isArray(value)) {
+    return value.map(deepParse);
+  }
+
+  if (value && typeof value === "object") {
+    const obj = {};
+
+    for (const [key, val] of Object.entries(value)) {
+      obj[key] = deepParse(val);
+    }
+
+    return obj;
+  }
+
+  if (typeof value === "string") {
+    const text = value.trim();
+
+    // hanya coba parse jika memang terlihat seperti JSON
+    if (
+      text.startsWith("{") ||
+      text.startsWith("[") ||
+      text === "true" ||
+      text === "false" ||
+      text === "null" ||
+      /^-?\d+(\.\d+)?$/.test(text)
+    ) {
+      try {
+        return deepParse(JSON.parse(text));
+      } catch {
+        return value;
+      }
+    }
+  }
+
+  return value;
 }
 
 export function formatOutput(str) {
@@ -108,11 +180,12 @@ export function cleanHeaders(headers) {
 
 export function buildUrlWithParams(log) {
   let url = log.url || '';
-  const params = log.queryParams || [];
-  const qs = params.filter(p => p.key.trim()).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
-  if (qs) {
-    const separator = url.includes('?') ? '&' : '?';
-    url = url + separator + qs;
-  }
+  // console.log('URL------------>', log.url);
+  // const params = log.queryParams || [];
+  // const qs = params.filter(p => p.key).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
+  // if (qs) {
+  //   const separator = url.includes('?') ? '&' : '?';
+  //   url = url + separator + qs;
+  // }
   return url;
 }
