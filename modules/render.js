@@ -111,7 +111,7 @@ export function selectLog(idx) {
   setSelectedId(idx);
   // editingId diabaikan – selalu mode edit
   setActiveTab('request');
-  setActiveSubTab('params');
+  // setActiveSubTab('params');
   renderList();
   renderDetail(idx);
 }
@@ -172,7 +172,13 @@ export function renderDetail(idx) {
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
-  
+  // if (log.queryParams.length > 0) {
+  //   setActiveSubTab('params');
+  // } else if (log.requestHeaders.length > 0) {
+  //   setActiveSubTab('headers');
+  // } else if (log.requestBody.length > 0) {
+  //   setActiveSubTab('body');
+  // }
 
   // ── Sub-tabs (selalu ditampilkan) ──
   html += `<div class="sub-tabs">
@@ -185,7 +191,7 @@ export function renderDetail(idx) {
     ${renderHeadersSubtab(log)}
     ${renderBodySubtab(log)}
   </div>`;
-
+  
   html += `</div>`; // tutup panel request
 
   // ── Response panel ──
@@ -211,7 +217,7 @@ export function renderDetail(idx) {
   html += `</div>`;
 
   // ── Note ──
-  html += `<div class="note-area"><label>📝 Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
+  html += `<div class="note-area"><label>Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
 
   detailContent.innerHTML = html;
 
