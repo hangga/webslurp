@@ -87,10 +87,6 @@ export function startCapture() {
 
     const bodyInfo = detectBodyInfo(postData, reqHeaders);
 
-    if (queryParams.length > 0) {
-      console.log('QUERY-DATA----->', queryParams);
-    }
-
     const log = {
       time: new Date().toLocaleTimeString(),
       url: request.request.url,
@@ -215,8 +211,6 @@ export async function sendRequest(idx) {
       ...log,
       url,
       method,
-      queryParams: request.queryParams,
-      queryData: request.queryData,
       requestHeaders: headers,
       requestBody: (mode === 'form-data' || mode === 'x-www-form-urlencoded') ? '' : body,
       response: responseBody,
