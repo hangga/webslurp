@@ -181,7 +181,7 @@ export function cleanHeaders(headers) {
 export function buildUrlWithParams(log) {
   let url = log.url || '';
   const params = log.queryParams || [];
-  const qs = params.filter(p => p.key.trim()).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
+  const qs = params.filter(p => p.key).map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
   if (qs) {
     const separator = url.includes('?') ? '&' : '?';
     url = url + separator + qs;

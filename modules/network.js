@@ -58,7 +58,14 @@ export function startCapture() {
     const reqHeaders = {};
     request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
 
-    const queryData = request.request.queryData;
+    // const queryParams = (request.request.queryString || []).map(param => ({
+    //   name: param.name,
+    //   value: param.value
+    // }));
+
+    const queryParams = (request.request.queryString || [])
+      .filter(({ name }) => name)
+      .map(({ name, value }) => ({ name, value }));
 
     const postData = request.request.postData || '';
 
@@ -80,6 +87,10 @@ export function startCapture() {
 
     const bodyInfo = detectBodyInfo(postData, reqHeaders);
 
+    if (queryParams.length > 0) {
+      console.log('QUERY-DATA----->', queryParams);
+    }
+
     const log = {
       time: new Date().toLocaleTimeString(),
       url: request.request.url,
@@ -92,7 +103,7 @@ export function startCapture() {
       response: responseBody,
       responseHeaders: respHeaders,
       note: '',
-      queryParams: [],
+      queryParams,
       bodyMode: bodyInfo.bodyMode,
       bodyRawType: bodyInfo.bodyRawType,
       formDataFields: [],
@@ -204,6 +215,8 @@ export async function sendRequest(idx) {
       ...log,
       url,
       method,
+      queryParams: request.queryParams,
+      queryData: request.queryData,
       requestHeaders: headers,
       requestBody: (mode === 'form-data' || mode === 'x-www-form-urlencoded') ? '' : body,
       response: responseBody,

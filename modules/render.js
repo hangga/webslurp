@@ -125,6 +125,9 @@ export function renderDetail(idx) {
     return;
   }
 
+  // console.log('CEK-PARAM----->', log.queryParams);
+  // console.log('CEK-QUERY-PARAM----->', log.params.value);
+
   detailEmpty.style.display = 'none';
   detailContent.style.display = 'flex';
   detailContent.className = 'active';
@@ -243,21 +246,62 @@ export function renderDetail(idx) {
 }
 
 // ── Subtab render functions (tidak berubah) ──
+// export function renderParamsSubtab(log) {
+//   const params = log.queryParams || [];
+//   let html = `<div class="sub-panel ${activeSubTab === 'params' ? 'active' : ''}" data-subpanel="params">
+//     <div class="params-table"><div class="params-row header-row"><span class="pkey">Key</span><span class="pvalue">Value</span><span class="paction"></span></div>`;
+//   if (params.length === 0) params.push({ key: '', value: '' });
+//   params.forEach((p, i) => {
+//     html += `<div class="params-row" data-pindex="${i}">
+//       <div class="pkey"><input class="param-key" value="${escapeHtml(p.key)}" placeholder="Key" /></div>
+//       <div class="pvalue"><input class="param-value" value="${escapeHtml(p.value)}" placeholder="Value" /></div>
+//       <div class="paction"><button class="param-remove" data-pindex="${i}" ${params.length === 1 ? 'disabled' : ''}>×</button></div>
+//     </div>`;
+//   });
+//   html += `<button class="param-add">+ Add Parameter</button></div>
+//     <div class="params-preview">URL preview: <span id="url-preview">${escapeHtml(buildUrlWithParams(log))}</span></div>
+//   </div>`;
+//   return html;
+// }
+
 export function renderParamsSubtab(log) {
-  const params = log.queryParams || [];
+  const params = (log.queryParams || []).map(param => ({
+    key: param.key ?? param.name ?? "",
+    value: param.value ?? ""
+  }));
+
   let html = `<div class="sub-panel ${activeSubTab === 'params' ? 'active' : ''}" data-subpanel="params">
-    <div class="params-table"><div class="params-row header-row"><span class="pkey">Key</span><span class="pvalue">Value</span><span class="paction"></span></div>`;
-  if (params.length === 0) params.push({ key: '', value: '' });
+    <div class="params-table">
+      <div class="params-row header-row">
+        <span class="pkey">Key</span>
+        <span class="pvalue">Value</span>
+        <span class="paction"></span>
+      </div>`;
+
+  if (params.length === 0) {
+    params.push({ key: "", value: "" });
+  }
+
   params.forEach((p, i) => {
-    html += `<div class="params-row" data-pindex="${i}">
-      <div class="pkey"><input class="param-key" value="${escapeHtml(p.key)}" placeholder="Key" /></div>
-      <div class="pvalue"><input class="param-value" value="${escapeHtml(p.value)}" placeholder="Value" /></div>
-      <div class="paction"><button class="param-remove" data-pindex="${i}" ${params.length === 1 ? 'disabled' : ''}>×</button></div>
-    </div>`;
+    html += `
+      <div class="params-row" data-pindex="${i}">
+        <div class="pkey">
+          <input class="param-key" value="${escapeHtml(p.key)}" placeholder="Key" />
+        </div>
+        <div class="pvalue">
+          <input class="param-value" value="${escapeHtml(p.value)}" placeholder="Value" />
+        </div>
+        <div class="paction">
+          <button class="param-remove" data-pindex="${i}" ${params.length === 1 ? "disabled" : ""}>×</button>
+        </div>
+      </div>`;
   });
-  html += `<button class="param-add">+ Add Parameter</button></div>
-    <div class="params-preview">URL preview: <span id="url-preview">${escapeHtml(buildUrlWithParams(log))}</span></div>
+
+  html += `
+      <button class="param-add">+ Add Parameter</button>
+    </div>
   </div>`;
+
   return html;
 }
 
