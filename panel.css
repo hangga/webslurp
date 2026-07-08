@@ -2110,7 +2110,7 @@ body {
   font-style: italic;
 }
 .rheaders-container {
-  max-height: 120px;
+  /* max-height: 120px; */
   overflow-y: auto;
   background: var(--bg-rheaders);
   border: 1px solid var(--border-color);
