@@ -158,6 +158,12 @@ export function renderDetail(idx) {
   }
   html += `</div>`;
 
+  // ── Request meta (selalu editable) ──
+  html += `<div class="request-meta">
+    <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+    <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>
+  </div>`;
+
   // ── TABS ──
   html += `<div class="detail-tabs">
     <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
@@ -166,22 +172,16 @@ export function renderDetail(idx) {
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
-  // ── Request meta (selalu editable) ──
-  html += `<div class="request-meta">
-    <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
-    <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>
-  </div>`;
+  
 
   // ── Sub-tabs (selalu ditampilkan) ──
   html += `<div class="sub-tabs">
     <button class="sub-tab ${activeSubTab === 'params' ? 'active' : ''}" data-subtab="params">Params</button>
-    <button class="sub-tab ${activeSubTab === 'auth' ? 'active' : ''}" data-subtab="auth">Auth</button>
     <button class="sub-tab ${activeSubTab === 'headers' ? 'active' : ''}" data-subtab="headers">Headers</button>
     <button class="sub-tab ${activeSubTab === 'body' ? 'active' : ''}" data-subtab="body">Body</button>
   </div>
   <div class="sub-content">
     ${renderParamsSubtab(log)}
-    ${renderAuthSubtab(log)}
     ${renderHeadersSubtab(log)}
     ${renderBodySubtab(log)}
   </div>`;
@@ -245,25 +245,6 @@ export function renderDetail(idx) {
   attachSubtabEvents(idx);
 }
 
-// ── Subtab render functions (tidak berubah) ──
-// export function renderParamsSubtab(log) {
-//   const params = log.queryParams || [];
-//   let html = `<div class="sub-panel ${activeSubTab === 'params' ? 'active' : ''}" data-subpanel="params">
-//     <div class="params-table"><div class="params-row header-row"><span class="pkey">Key</span><span class="pvalue">Value</span><span class="paction"></span></div>`;
-//   if (params.length === 0) params.push({ key: '', value: '' });
-//   params.forEach((p, i) => {
-//     html += `<div class="params-row" data-pindex="${i}">
-//       <div class="pkey"><input class="param-key" value="${escapeHtml(p.key)}" placeholder="Key" /></div>
-//       <div class="pvalue"><input class="param-value" value="${escapeHtml(p.value)}" placeholder="Value" /></div>
-//       <div class="paction"><button class="param-remove" data-pindex="${i}" ${params.length === 1 ? 'disabled' : ''}>×</button></div>
-//     </div>`;
-//   });
-//   html += `<button class="param-add">+ Add Parameter</button></div>
-//     <div class="params-preview">URL preview: <span id="url-preview">${escapeHtml(buildUrlWithParams(log))}</span></div>
-//   </div>`;
-//   return html;
-// }
-
 export function renderParamsSubtab(log) {
   const params = (log.queryParams || []).map(param => ({
     key: param.key ?? param.name ?? "",
@@ -305,39 +286,39 @@ export function renderParamsSubtab(log) {
   return html;
 }
 
-export function renderAuthSubtab(log) {
-  const auth = log.auth || { type: 'none' };
-  let html = `<div class="sub-panel ${activeSubTab === 'auth' ? 'active' : ''}" data-subpanel="auth">
-    <div class="auth-row"><label>Auth Type</label><select id="auth-type">
-      <option value="none" ${auth.type === 'none' ? 'selected' : ''}>None</option>
-      <option value="basic" ${auth.type === 'basic' ? 'selected' : ''}>Basic Auth</option>
-      <option value="bearer" ${auth.type === 'bearer' ? 'selected' : ''}>Bearer Token</option>
-      <option value="oauth2" ${auth.type === 'oauth2' ? 'selected' : ''}>OAuth 2.0</option>
-    </select></div>`;
-  if (auth.type === 'basic') {
-    html += `<div class="auth-fields"><div class="auth-row"><label>Username</label><input id="auth-basic-username" value="${escapeHtml(auth.username || '')}" /></div>
-    <div class="auth-row"><label>Password</label><input id="auth-basic-password" type="password" value="${escapeHtml(auth.password || '')}" /></div></div>`;
-  } else if (auth.type === 'bearer') {
-    html += `<div class="auth-fields"><div class="auth-row"><label>Token</label><input id="auth-bearer-token" value="${escapeHtml(auth.token || '')}" /></div></div>`;
-  } else if (auth.type === 'oauth2') {
-    const grantType = auth.grantType || 'client_credentials';
-    html += `<div class="auth-fields">
-      <div class="auth-row"><label>Grant Type</label><select id="auth-oauth2-grant">
-        <option value="client_credentials" ${grantType === 'client_credentials' ? 'selected' : ''}>Client Credentials</option>
-        <option value="password" ${grantType === 'password' ? 'selected' : ''}>Password Grant</option>
-      </select></div>
-      <div class="auth-row"><label>Token URL</label><input id="auth-oauth2-tokenurl" value="${escapeHtml(auth.tokenUrl || '')}" /></div>
-      <div class="auth-row"><label>Client ID</label><input id="auth-oauth2-clientid" value="${escapeHtml(auth.clientId || '')}" /></div>
-      <div class="auth-row"><label>Client Secret</label><input id="auth-oauth2-clientsecret" type="password" value="${escapeHtml(auth.clientSecret || '')}" /></div>
-      <div class="auth-row"><label>Scope</label><input id="auth-oauth2-scope" value="${escapeHtml(auth.scope || '')}" /></div>
-      ${grantType === 'password' ? `<div class="auth-row"><label>Username</label><input id="auth-oauth2-username" value="${escapeHtml(auth.username || '')}" /></div><div class="auth-row"><label>Password</label><input id="auth-oauth2-password" type="password" value="${escapeHtml(auth.password || '')}" /></div>` : ''}
-      <div class="auth-row"><label>Access Token</label><input id="auth-oauth2-accesstoken" value="${escapeHtml(auth.accessToken || '')}" /></div>
-      <div class="auth-row"><button id="auth-oauth2-fetch-token" class="btn secondary">Get Access Token</button></div>
-    </div>`;
-  }
-  html += `</div>`;
-  return html;
-}
+// export function renderAuthSubtab(log) {
+//   const auth = log.auth || { type: 'none' };
+//   let html = `<div class="sub-panel ${activeSubTab === 'auth' ? 'active' : ''}" data-subpanel="auth">
+//     <div class="auth-row"><label>Auth Type</label><select id="auth-type">
+//       <option value="none" ${auth.type === 'none' ? 'selected' : ''}>None</option>
+//       <option value="basic" ${auth.type === 'basic' ? 'selected' : ''}>Basic Auth</option>
+//       <option value="bearer" ${auth.type === 'bearer' ? 'selected' : ''}>Bearer Token</option>
+//       <option value="oauth2" ${auth.type === 'oauth2' ? 'selected' : ''}>OAuth 2.0</option>
+//     </select></div>`;
+//   if (auth.type === 'basic') {
+//     html += `<div class="auth-fields"><div class="auth-row"><label>Username</label><input id="auth-basic-username" value="${escapeHtml(auth.username || '')}" /></div>
+//     <div class="auth-row"><label>Password</label><input id="auth-basic-password" type="password" value="${escapeHtml(auth.password || '')}" /></div></div>`;
+//   } else if (auth.type === 'bearer') {
+//     html += `<div class="auth-fields"><div class="auth-row"><label>Token</label><input id="auth-bearer-token" value="${escapeHtml(auth.token || '')}" /></div></div>`;
+//   } else if (auth.type === 'oauth2') {
+//     const grantType = auth.grantType || 'client_credentials';
+//     html += `<div class="auth-fields">
+//       <div class="auth-row"><label>Grant Type</label><select id="auth-oauth2-grant">
+//         <option value="client_credentials" ${grantType === 'client_credentials' ? 'selected' : ''}>Client Credentials</option>
+//         <option value="password" ${grantType === 'password' ? 'selected' : ''}>Password Grant</option>
+//       </select></div>
+//       <div class="auth-row"><label>Token URL</label><input id="auth-oauth2-tokenurl" value="${escapeHtml(auth.tokenUrl || '')}" /></div>
+//       <div class="auth-row"><label>Client ID</label><input id="auth-oauth2-clientid" value="${escapeHtml(auth.clientId || '')}" /></div>
+//       <div class="auth-row"><label>Client Secret</label><input id="auth-oauth2-clientsecret" type="password" value="${escapeHtml(auth.clientSecret || '')}" /></div>
+//       <div class="auth-row"><label>Scope</label><input id="auth-oauth2-scope" value="${escapeHtml(auth.scope || '')}" /></div>
+//       ${grantType === 'password' ? `<div class="auth-row"><label>Username</label><input id="auth-oauth2-username" value="${escapeHtml(auth.username || '')}" /></div><div class="auth-row"><label>Password</label><input id="auth-oauth2-password" type="password" value="${escapeHtml(auth.password || '')}" /></div>` : ''}
+//       <div class="auth-row"><label>Access Token</label><input id="auth-oauth2-accesstoken" value="${escapeHtml(auth.accessToken || '')}" /></div>
+//       <div class="auth-row"><button id="auth-oauth2-fetch-token" class="btn secondary">Get Access Token</button></div>
+//     </div>`;
+//   }
+//   html += `</div>`;
+//   return html;
+// }
 
 export function renderHeadersSubtab(log) {
   const headersArr = headersToArray(log.requestHeaders || {});
@@ -356,48 +337,7 @@ export function renderHeadersSubtab(log) {
 }
 
 export function renderBodySubtab(log) {
-  const mode = log.bodyMode || 'none';
-  const rawType = log.bodyRawType || 'text';
-  const formFields = log.formDataFields || [];
   let html = `<div class="sub-panel ${activeSubTab === 'body' ? 'active' : ''}" data-subpanel="body">
-    <div class="body-mode-row"><label>Body Mode</label><select id="body-mode">
-      <option value="none" ${mode === 'none' ? 'selected' : ''}>None</option>
-      <option value="form-data" ${mode === 'form-data' ? 'selected' : ''}>Form Data</option>
-      <option value="x-www-form-urlencoded" ${mode === 'x-www-form-urlencoded' ? 'selected' : ''}>x-www-form-urlencoded</option>
-      <option value="raw" ${mode === 'raw' ? 'selected' : ''}>Raw</option>
-    </select></div>`;
-  if (mode === 'raw') {
-    html += `<div class="body-raw-row"><label>Raw Type</label><select id="body-raw-type">
-      <option value="text" ${rawType === 'text' ? 'selected' : ''}>Text</option>
-      <option value="json" ${rawType === 'json' ? 'selected' : ''}>JSON</option>
-      <option value="xml" ${rawType === 'xml' ? 'selected' : ''}>XML</option>
-    </select></div>
-    <div class="body-textarea-row"><textarea id="edit-body" rows="6">${bodyToJson(log.requestBody) || ''}</textarea></div>`;
-  } else if (mode === 'form-data') {
-    html += `<div class="form-data-fields"><div class="form-row header-row"><span class="fkey">Key</span><span class="fvalue">Value</span><span class="ftype">Type</span><span class="faction"></span></div>`;
-    if (formFields.length === 0) formFields.push({ key: '', value: '', type: 'text' });
-    formFields.forEach((f, i) => {
-      const isFile = f.type === 'file';
-      html += `<div class="form-row" data-findex="${i}">
-        <div class="fkey"><input class="form-key" value="${escapeHtml(f.key)}" placeholder="Key" /></div>
-        <div class="fvalue">${isFile ? `<input class="form-file" type="file" />` : `<input class="form-text" value="${escapeHtml(f.value)}" placeholder="Value" />`}</div>
-        <div class="ftype"><select class="form-type"><option value="text" ${!isFile ? 'selected' : ''}>Text</option><option value="file" ${isFile ? 'selected' : ''}>File</option></select></div>
-        <div class="faction"><button class="form-remove" data-findex="${i}" ${formFields.length === 1 ? 'disabled' : ''}>×</button></div>
-      </div>`;
-    });
-    html += `<button class="form-add">+ Add Field</button></div>`;
-  } else if (mode === 'x-www-form-urlencoded') {
-    html += `<div class="urlencoded-fields"><div class="urlencoded-row header-row"><span class="ukey">Key</span><span class="uvalue">Value</span><span class="uaction"></span></div>`;
-    const fields = formFields.length ? formFields : [{ key: '', value: '' }];
-    fields.forEach((f, i) => {
-      html += `<div class="urlencoded-row" data-uindex="${i}">
-        <div class="ukey"><input class="urlencoded-key" value="${escapeHtml(f.key)}" placeholder="Key" /></div>
-        <div class="uvalue"><input class="urlencoded-value" value="${escapeHtml(f.value)}" placeholder="Value" /></div>
-        <div class="uaction"><button class="urlencoded-remove" data-uindex="${i}" ${fields.length === 1 ? 'disabled' : ''}>×</button></div>
-      </div>`;
-    });
-    html += `<button class="urlencoded-add">+ Add Field</button></div>`;
-  }
-  html += `</div>`;
+  <div class="body-textarea-row"><textarea id="edit-body" rows="6">${bodyToJson(log.requestBody) || ''}</textarea></div></div>`;
   return html;
 }
