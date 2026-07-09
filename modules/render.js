@@ -125,9 +125,6 @@ export function renderDetail(idx) {
     return;
   }
 
-  // console.log('CEK-PARAM----->', log.queryParams);
-  // console.log('CEK-QUERY-PARAM----->', log.params.value);
-
   detailEmpty.style.display = 'none';
   detailContent.style.display = 'flex';
   detailContent.className = 'active';
@@ -154,8 +151,25 @@ export function renderDetail(idx) {
   // Siapkan teks response yang sudah diformat (plain)
   const formattedText = log.response ? formatOutputPlain(log.response) : '';
 
+  
+
+  // ── TABS ──
+  html += `<div class="detail-tabs">
+    <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
+    <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
+  </div>`;
+
+  html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
+
+  
+
+  // ── Request meta (selalu editable) ──
+  html += `<div class="request-meta">
+    <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+    <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>`;
+  
   // ── ACTIONS ──
-  html += `<div class="detail-actions">`;
+  // html += `<div class="detail-actions">`;
   html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
     ${isSending ? '⏳ Sending...' : '▶ Send'}
   </button>`;
@@ -167,21 +181,10 @@ export function renderDetail(idx) {
     const cls = log.sendStatus === 'success' ? 'success' : 'error';
     html += `<div class="send-status ${cls}">${label}</div>`;
   }
-  html += `</div>`;
-
-  // ── Request meta (selalu editable) ──
-  html += `<div class="request-meta">
-    <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
-    <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>
+  // html += `</div>`;
+  
+  html +=`
   </div>`;
-
-  // ── TABS ──
-  html += `<div class="detail-tabs">
-    <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
-    <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
-  </div>`;
-
-  html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
   // ── Sub-tabs (selalu ditampilkan) ──
   html += `<div class="sub-tabs">
