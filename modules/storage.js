@@ -13,3 +13,12 @@ export async function loadLogs() {
   const result = await chrome.storage.local.get('logs');
   setLogs(result.logs || []);
 }
+
+export async function saveCaptureFilter(filter) {
+  await chrome.storage.local.set({ captureFilter: filter });
+}
+
+export async function loadCaptureFilter() {
+  const result = await chrome.storage.local.get('captureFilter');
+  return result.captureFilter || null;
+}

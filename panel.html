@@ -7,14 +7,47 @@
   <link rel="stylesheet" href="panel.css" />
 </head>
 <body>
-  <div id="search-bar">
-    <div class="brand">
-      <a id="status-link" href="https://hangga.web.id/brutusuite" target="_blank">
-        <img width="100px" class="icon" src="icons/logo-light-prop-small.png"/>
-      </a>
+  <!-- <div class="top-banner">
+    <a id="status-link" href="https://hangga.web.id/brutusuite" target="_blank">
+        <img width="80px" class="icon" src="icons/logo-light-prop-small.png"/>
+    </a>
+    <div class="actions">
+      <div class="theme-picker">
+        <img src="icons/theme.png" class="theme-icon"/>
+          <select id="theme-select">
+          <option value="vscode-dark">VS Code Dark</option>
+          <option value="jetbrains-dark">JetBrains Dark</option>
+          <option value="one-dark">One Dark</option>
+          <option value="solarized-dark">Solarized Dark</option>
+          <option value="vscode-light">VS Code Light</option>
+          <option value="github-light">GitHub Light</option>
+          <option value="dracula">Dracula</option>
+          <option value="monokai">Monokai</option>
+          <option value="nord">Nord</option>
+          <option value="catppuccin">Catppuccin</option>
+          <option value="tokyo-night">Tokyo Night</option>
+          <option value="gruvbox">Gruvbox</option>
+          <option value="ayu-dark">Ayu Dark</option>
+          <option value="ayu-light">Ayu Light</option>
+          <option value="material-dark">Material Dark</option>
+          <option value="material-light">Material Light</option>
+          <option value="palenight">Palenight</option>
+          <option value="solarized-light">Solarized Light</option>
+        </select>
+      </div>
     </div>
-    <span class="search-icon">🔍</span>
+  </div> -->
+  <div id="search-bar">
+    <button id="reload-btn" class="btn secondary">Reload</button>
+    <select id="capture-mode">
+          <option value="api">API Only</option>
+          <option value="all">All Traffic</option>
+          <option value="custom">Custom</option>
+        </select>
+    <!-- <span class="search-icon">🔍</span> -->
     <input id="search" type="text" placeholder="Filter by URL…" spellcheck="false" />
+    <!-- <span class="capture-label">Capture:</span> -->
+    
     <select id="filter-method">
       <option value="">All Methods</option>
       <option value="GET">GET</option>
@@ -35,32 +68,48 @@
     <input id="filter-content" type="text" placeholder="Search in request/response…" spellcheck="false" />
     <span id="count-badge">0</span>
     <div class="actions">
-      <select id="theme-select">
-        <option value="vscode-dark">VS Code Dark</option>
-        <option value="jetbrains-dark">JetBrains Dark</option>
-        <option value="one-dark">One Dark</option>
-        <option value="solarized-dark">Solarized Dark</option>
-        <option value="vscode-light">VS Code Light</option>
-        <option value="github-light">GitHub Light</option>
-        <option value="dracula">Dracula</option>
-        <option value="monokai">Monokai</option>
-        <option value="nord">Nord</option>
-        <option value="catppuccin">Catppuccin</option>
-        <option value="tokyo-night">Tokyo Night</option>
-        <option value="gruvbox">Gruvbox</option>
-        <option value="ayu-dark">Ayu Dark</option>
-        <option value="ayu-light">Ayu Light</option>
-        <option value="material-dark">Material Dark</option>
-        <option value="material-light">Material Light</option>
-        <option value="palenight">Palenight</option>
-        <option value="solarized-light">Solarized Light</option>
-      </select>
-      <button id="clear" class="btn primary">Clear</button>
+      <button id="clear" class="btn secondary">Clear</button>
+      
+      <div class="theme-picker">
+        <img src="icons/theme.png" class="theme-icon"/>
+          <select id="theme-select">
+          <option value="vscode-dark">VS Code Dark</option>
+          <option value="jetbrains-dark">JetBrains Dark</option>
+          <option value="one-dark">One Dark</option>
+          <option value="solarized-dark">Solarized Dark</option>
+          <option value="vscode-light">VS Code Light</option>
+          <option value="github-light">GitHub Light</option>
+          <option value="dracula">Dracula</option>
+          <option value="monokai">Monokai</option>
+          <option value="nord">Nord</option>
+          <option value="catppuccin">Catppuccin</option>
+          <option value="tokyo-night">Tokyo Night</option>
+          <option value="gruvbox">Gruvbox</option>
+          <option value="ayu-dark">Ayu Dark</option>
+          <option value="ayu-light">Ayu Light</option>
+          <option value="material-dark">Material Dark</option>
+          <option value="material-light">Material Light</option>
+          <option value="palenight">Palenight</option>
+          <option value="solarized-light">Solarized Light</option>
+        </select>
+      </div>
     </div>
   </div>
 
   <div id="split-view">
-    <div id="log-list"></div>
+    <div id="log-list">
+      <div id="custom-filters">
+          <label><input type="checkbox" id="filter-http-only" checked> HTTP/HTTPS only</label>
+          <label><input type="checkbox" id="filter-skip-options" checked> Skip OPTIONS</label>
+          <label><input type="checkbox" id="filter-skip-images" checked> Skip Images</label>
+          <label><input type="checkbox" id="filter-skip-css" checked> Skip CSS</label>
+          <label><input type="checkbox" id="filter-skip-js" checked> Skip JavaScript</label>
+          <label><input type="checkbox" id="filter-skip-fonts" checked> Skip Fonts</label>
+          <label><input type="checkbox" id="filter-skip-media" checked> Skip Media</label>
+          <label><input type="checkbox" id="filter-skip-websocket" checked> Skip WebSocket</label>
+      </div>
+      <div id="log-list-container"></div>
+    </div>
     <div id="divider"></div>
     <div id="detail-panel">
       <div id="detail-empty">Select a request to view details</div>

@@ -1,6 +1,6 @@
 import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          setSelectedId, setEditingId, setActiveTab, setActiveSubTab,
-         logListEl, detailEmpty, detailContent, countBadge, statusText, statusCount,
+         logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
          MAX_LOGS } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, buildUrlWithParams, bodyToJson } from './helpers.js';
@@ -30,7 +30,7 @@ export function renderList() {
 
   const sortedHostnames = Object.keys(groups).sort();
 
-  logListEl.innerHTML = '';
+  logListContainer.innerHTML = '';
   sortedHostnames.forEach(hostname => {
     const groupLogs = groups[hostname];
     const groupDiv = document.createElement('div');
@@ -88,7 +88,7 @@ export function renderList() {
       body.appendChild(entry);
     });
     groupDiv.appendChild(body);
-    logListEl.appendChild(groupDiv);
+    logListContainer.appendChild(groupDiv);
   });
 
   if (logs.length === 0) {
@@ -264,10 +264,6 @@ export function renderParamsSubtab(log) {
         <span class="pvalue">Value</span>
         <span class="paction"></span>
       </div>`;
-
-  if (params.length === 0) {
-    params.push({ key: "", value: "" });
-  }
 
   params.forEach((p, i) => {
     html += `
