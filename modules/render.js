@@ -151,8 +151,8 @@ export function renderDetail(idx) {
   .search-nav { padding: 4px 8px; cursor: pointer; }
   </style>`;
 
-// Siapkan teks response yang sudah diformat (plain)
-const formattedText = log.response ? formatOutputPlain(log.response) : '';
+  // Siapkan teks response yang sudah diformat (plain)
+  const formattedText = log.response ? formatOutputPlain(log.response) : '';
 
   // ── ACTIONS ──
   html += `<div class="detail-actions">`;
@@ -183,14 +183,6 @@ const formattedText = log.response ? formatOutputPlain(log.response) : '';
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
-  // if (log.queryParams.length > 0) {
-  //   setActiveSubTab('params');
-  // } else if (log.requestHeaders.length > 0) {
-  //   setActiveSubTab('headers');
-  // } else if (log.requestBody.length > 0) {
-  //   setActiveSubTab('body');
-  // }
-
   // ── Sub-tabs (selalu ditampilkan) ──
   html += `<div class="sub-tabs">
     <button class="sub-tab ${activeSubTab === 'params' ? 'active' : ''}" data-subtab="params">Params</button>
@@ -216,12 +208,24 @@ const formattedText = log.response ? formatOutputPlain(log.response) : '';
       ${log.response ? `<span class="rsize">📦 ${(log.response.length / 1024).toFixed(1)} KB</span>` : ''}
       <span class="rbadge">${log.mime || 'unknown'}</span>
     </div>`;
-    const respHeaders = headersToArray(log.responseHeaders || {});
-    html += `<div class="response-headers"><label>Response Headers</label><div class="rheaders-container">`;
-    if (respHeaders.length) respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
-    else html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
-    html += `</div></div>`;
     
+    const respHeaders = headersToArray(log.responseHeaders || {});
+    
+    // ── Response Headers (expandable) ──
+    html += `<div class="response-headers">
+      <label style="display:flex;" id="headers-toggle">
+        <span>Response Headers</span>
+        <span id="headers-toggle-icon">▶</span>
+      </label>
+      <div class="rheaders-container" id="rheaders-container" style="max-height:0;overflow:hidden;transition:max-height 0.2s ease;">
+        <div class="rh-inner">`;
+    if (respHeaders.length) {
+      respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
+    } else {
+      html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
+    }
+    html += `</div></div></div>`;
+
     const highlightedBody = highlightText(formattedText, '');
 
     html += `<div class="response-body">
@@ -243,6 +247,50 @@ const formattedText = log.response ? formatOutputPlain(log.response) : '';
   html += `<div class="note-area"><label>Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
 
   detailContent.innerHTML = html;
+
+  // ── Response headers expandable toggle ──
+  const headersToggle = document.getElementById('headers-toggle');
+  const headersContainer = document.getElementById('rheaders-container');
+  const toggleIcon = document.getElementById('headers-toggle-icon');
+  let headersExpanded = false;
+
+  if (headersToggle && headersContainer) {
+    // Hitung jumlah header
+    const headerRows = headersContainer.querySelectorAll('.rh-row');
+    const inner = headersContainer.querySelector('.rh-inner');
+
+    // Jika tidak ada header, sembunyikan toggle dan label
+    if (headerRows.length === 0) {
+      headersToggle.style.display = 'none';
+      headersContainer.style.display = 'none';
+    } else {
+      // Default: collapsed jika > 5, expanded jika <= 5
+      if (headerRows.length > 5) {
+        headersExpanded = false;
+        headersContainer.style.maxHeight = '0';
+        toggleIcon.textContent = '▶';
+      } else {
+        headersExpanded = true;
+        // Set max-height sesuai konten
+        const height = inner ? inner.scrollHeight : 0;
+        headersContainer.style.maxHeight = height + 'px';
+        toggleIcon.textContent = '▼';
+      }
+
+      headersToggle.addEventListener('click', () => {
+        headersExpanded = !headersExpanded;
+        if (headersExpanded) {
+          const innerNow = headersContainer.querySelector('.rh-inner');
+          const heightNow = innerNow ? innerNow.scrollHeight : 0;
+          headersContainer.style.maxHeight = heightNow + 'px';
+          toggleIcon.textContent = '▼';
+        } else {
+          headersContainer.style.maxHeight = '0';
+          toggleIcon.textContent = '▶';
+        }
+      });
+    }
+  }
 
   // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
