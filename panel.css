@@ -1327,6 +1327,27 @@ body {
     padding: 2px;
 }
 
+.search-nav{
+  height: 28px;
+  background: var(--accent);
+  border: 8px solid var(--accent-border);
+  padding: 4px 8px 0 4px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  height: 28px;
+  transition: background 0.15s, opacity 0.15s;
+  color: var(--text-primary);
+}
+.search-nav:hover {
+  background: var(--bg-hover);
+}
+.search-nav:active {
+  opacity: 0.7;
+}
+
 #theme-select {
   /* background: var(--bg-input); */
   background: var(--accent);
@@ -2089,7 +2110,8 @@ body {
   gap: 16px;
   align-items: center;
   padding: 6px 12px;
-  background: var(--bg-response-summary);
+  /* background: var(--bg-response-summary); */
+  background: linear-gradient(90deg, var(--badge-bg), var(--accent));
   border-radius: 4px;
   border: 1px solid var(--border-color);
   margin-bottom: 12px;
@@ -2121,6 +2143,7 @@ body {
 .response-headers {
   margin-bottom: 12px;
   flex-shrink: 0;
+  cursor:pointer;
 }
 .response-headers label,
 .response-body label {
