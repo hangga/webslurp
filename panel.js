@@ -5,12 +5,12 @@ import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
          filterStatus, filterContent, countBadge, statusText, statusCount,
          divider, MAX_LOGS } from './modules/state.js';
-import { loadLogs, saveLogs } from './modules/storage.js';
+import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
-import { theme, setTheme } from './modules/state.js';
+import { theme, setTheme, captureFilter } from './modules/state.js';
 
 // ── Resize divider ──
 let isDragging = false;
@@ -93,3 +93,66 @@ themeSelect.addEventListener('change', async (e) => {
   applyTheme(newTheme);
   await saveTheme(newTheme);
 });
+
+async function initCaptureFilter() {
+  const stored = await loadCaptureFilter();
+  if (stored) {
+    captureFilter.mode = stored.mode;
+    if (stored.custom) Object.assign(captureFilter.custom, stored.custom);
+  }
+
+  const modeSelect = document.getElementById('capture-mode');
+  modeSelect.value = captureFilter.mode;
+
+  // Set checkbox
+  const c = captureFilter.custom;
+  document.getElementById('filter-http-only').checked = c.httpOnly;
+  document.getElementById('filter-skip-options').checked = c.skipOptions;
+  document.getElementById('filter-skip-images').checked = c.skipImages;
+  document.getElementById('filter-skip-css').checked = c.skipCSS;
+  document.getElementById('filter-skip-js').checked = c.skipJS;
+  document.getElementById('filter-skip-fonts').checked = c.skipFonts;
+  document.getElementById('filter-skip-media').checked = c.skipMedia;
+  document.getElementById('filter-skip-websocket').checked = c.skipWebSocket;
+
+  toggleCustomFilters(captureFilter.mode === 'custom');
+}
+
+function toggleCustomFilters(show) {
+  document.getElementById('custom-filters').classList.toggle('visible', show);
+}
+
+// Event listeners
+document.getElementById('capture-mode').addEventListener('change', (e) => {
+  captureFilter.mode = e.target.value;
+  toggleCustomFilters(e.target.value === 'custom');
+  saveCaptureFilter(captureFilter);
+});
+
+document.querySelectorAll('#custom-filters input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const id = cb.id;
+    const key = id.replace('filter-', '');
+    const map = {
+      'http-only': 'httpOnly',
+      'skip-options': 'skipOptions',
+      'skip-images': 'skipImages',
+      'skip-css': 'skipCSS',
+      'skip-js': 'skipJS',
+      'skip-fonts': 'skipFonts',
+      'skip-media': 'skipMedia',
+      'skip-websocket': 'skipWebSocket',
+    };
+    captureFilter.custom[map[key]] = cb.checked;
+    saveCaptureFilter(captureFilter);
+  });
+});
+
+document.getElementById('reload-btn').addEventListener('click', () => {
+    chrome.devtools.inspectedWindow.reload({
+        ignoreCache: true
+    });
+});
+
+// Panggil setelah DOM siap
+initCaptureFilter();

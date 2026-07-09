@@ -19,6 +19,7 @@ export function setIgnoreStorageChange(val) { ignoreStorageChange = val; }
 
 // ── DOM refs ──
 export const logListEl = document.getElementById('log-list');
+export const logListContainer = document.getElementById('log-list-container');
 export const detailEmpty = document.getElementById('detail-empty');
 export const detailContent = document.getElementById('detail-content');
 export const searchInput = document.getElementById('search');
@@ -48,3 +49,17 @@ export function isGroupExpanded(hostname) {
 // ── State untuk tema ──
 export let theme = 'theme-jetbrains';
 export function setTheme(t) { theme = t; }
+
+export const captureFilter = {
+  mode: 'api', // 'api' | 'all' | 'custom'
+  custom: {
+    httpOnly: true,
+    skipOptions: true,
+    skipImages: true,
+    skipCSS: true,
+    skipJS: true,
+    skipFonts: true,
+    skipMedia: true,
+    skipWebSocket: true,
+  }
+};

@@ -1,7 +1,87 @@
-import { logs, selectedId, editingId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText } from './state.js';
+import { logs, selectedId, editingId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter } from './state.js';
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderList, renderDetail } from './render.js';
+
+// ── Helper deteksi tipe ──
+function detectType(request) {
+  const url = request.request.url;
+  const mime = request.response?.mimeType || '';
+
+  // 1. Coba dari request.type jika tersedia (beberapa versi mendukung)
+  if (request.type) {
+    return request.type;
+  }
+
+  // 2. Deteksi dari MIME type
+  if (mime.startsWith('image/')) return 'Image';
+  if (mime.startsWith('text/css')) return 'Stylesheet';
+  if (mime.includes('javascript') || mime === 'application/javascript') return 'Script';
+  if (mime.startsWith('font/')) return 'Font';
+  if (mime.startsWith('video/') || mime.startsWith('audio/')) return 'Media';
+
+  // 3. Deteksi dari ekstensi file
+  const ext = url.split('?')[0].split('.').pop()?.toLowerCase();
+  if (['png','jpg','jpeg','gif','bmp','webp','svg','ico','avif','tiff'].includes(ext)) return 'Image';
+  if (ext === 'css') return 'Stylesheet';
+  if (['js','mjs','ts','jsx','tsx','jsonp'].includes(ext)) return 'Script';
+  if (['woff','woff2','ttf','otf','eot','sfnt'].includes(ext)) return 'Font';
+  if (['mp4','webm','ogg','mp3','wav','flac','avi','mov','mkv','m4a','aac'].includes(ext)) return 'Media';
+
+  // 4. Deteksi WebSocket dari header Upgrade
+  const headers = request.request.headers || [];
+  for (const h of headers) {
+    if (h.name.toLowerCase() === 'upgrade' && h.value.toLowerCase() === 'websocket') {
+      return 'WebSocket';
+    }
+  }
+  if (url.startsWith('ws://') || url.startsWith('wss://')) return 'WebSocket';
+
+  return 'Other';
+}
+
+// ── Fungsi filter utama ──
+function shouldCapture(request) {
+  const url = request.request.url;
+  const method = request.request.method || 'GET';
+  const type = detectType(request);
+  const mode = captureFilter.mode;
+
+  // Mode 'all' → tangkap semua (kecuali internal yang sudah difilter di luar)
+  if (mode === 'all') return true;
+
+  // Mode 'api' → hanya tangkap request yang bukan statis, bukan OPTIONS, bukan WebSocket
+  if (mode === 'api') {
+    const skipTypes = ['Image','Stylesheet','Script','Font','Media','WebSocket'];
+    if (skipTypes.includes(type)) return false;
+    if (method === 'OPTIONS') return false;
+    // Optional: filter hanya request dengan response JSON (jika ingin lebih ketat)
+    // const mime = request.response?.mimeType || '';
+    // if (!mime.includes('json')) return false;
+    return true;
+  }
+
+  // Mode 'custom' → terapkan checkbox
+  if (mode === 'custom') {
+    const c = captureFilter.custom;
+    if (c.skipImages && type === 'Image') return false;
+    if (c.skipCSS && type === 'Stylesheet') return false;
+    if (c.skipJS && type === 'Script') return false;
+    if (c.skipFonts && type === 'Font') return false;
+    if (c.skipMedia && type === 'Media') return false;
+    if (c.skipWebSocket && type === 'WebSocket') return false;
+    if (c.skipOptions && method === 'OPTIONS') return false;
+    if (c.httpOnly) {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // fallback
+  return true;
+}
 
 // ── Deteksi body mode dari header dan postData ──
 function detectBodyInfo(postData, headers) {
@@ -53,15 +133,27 @@ function detectBodyInfo(postData, headers) {
 // ── CAPTURE REQUEST ──
 export function startCapture() {
   chrome.devtools.network.onRequestFinished.addListener(async (request) => {
-    // console.log('[BrutuSuite] Request tertangkap:', request.request.url, 'type:', request.type);
+
+    const url = request.request.url;
+
+    if (
+        url.startsWith('chrome-extension://') ||
+        url.startsWith('chrome://') ||
+        url.startsWith('devtools://') ||
+        url.startsWith('blob:') ||
+        url.startsWith('data:') ||
+        url.startsWith('about:')
+    ) {
+        return;
+    }
+
+    // Terapkan filter
+    if (!shouldCapture(request)) {
+      return;
+    }
 
     const reqHeaders = {};
     request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
-
-    // const queryParams = (request.request.queryString || []).map(param => ({
-    //   name: param.name,
-    //   value: param.value
-    // }));
 
     const queryParams = (request.request.queryString || [])
       .filter(({ name }) => name)
