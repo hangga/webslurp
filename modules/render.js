@@ -3,7 +3,7 @@ import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
          MAX_LOGS } from './state.js';
-import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, buildUrlWithParams, bodyToJson } from './helpers.js';
+import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -143,6 +143,17 @@ export function renderDetail(idx) {
 
   let html = '';
 
+  html += `<style>
+  .highlight { background-color: #ff0; color: #000; }
+  .highlight.active { background-color: #ff9632; }
+  .response-search-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .response-search-wrap input { flex: 1; padding: 4px 8px; }
+  .search-nav { padding: 4px 8px; cursor: pointer; }
+  </style>`;
+
+  // Siapkan teks response yang sudah diformat (plain)
+  const formattedText = log.response ? formatOutputPlain(log.response) : '';
+
   // ── ACTIONS ──
   html += `<div class="detail-actions">`;
   html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
@@ -172,14 +183,6 @@ export function renderDetail(idx) {
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
 
-  // if (log.queryParams.length > 0) {
-  //   setActiveSubTab('params');
-  // } else if (log.requestHeaders.length > 0) {
-  //   setActiveSubTab('headers');
-  // } else if (log.requestBody.length > 0) {
-  //   setActiveSubTab('body');
-  // }
-
   // ── Sub-tabs (selalu ditampilkan) ──
   html += `<div class="sub-tabs">
     <button class="sub-tab ${activeSubTab === 'params' ? 'active' : ''}" data-subtab="params">Params</button>
@@ -205,12 +208,36 @@ export function renderDetail(idx) {
       ${log.response ? `<span class="rsize">📦 ${(log.response.length / 1024).toFixed(1)} KB</span>` : ''}
       <span class="rbadge">${log.mime || 'unknown'}</span>
     </div>`;
+    
     const respHeaders = headersToArray(log.responseHeaders || {});
-    html += `<div class="response-headers"><label>Response Headers</label><div class="rheaders-container">`;
-    if (respHeaders.length) respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
-    else html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
-    html += `</div></div>`;
-    html += `<div class="response-body"><label>Response Body</label><div class="rb-content">${log.response ? formatOutput(log.response) : '<span class="empty-hint">(empty)</span>'}</div></div>`;
+    
+    // ── Response Headers (expandable) ──
+    html += `<div class="response-headers">
+      <label style="display:flex;" id="headers-toggle">
+        <span>Response Headers</span>
+        <span id="headers-toggle-icon">▶</span>
+      </label>
+      <div class="rheaders-container" id="rheaders-container" style="max-height:0;overflow:hidden;transition:max-height 0.2s ease;">
+        <div class="rh-inner">`;
+    if (respHeaders.length) {
+      respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
+    } else {
+      html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
+    }
+    html += `</div></div></div>`;
+
+    const highlightedBody = highlightText(formattedText, '');
+
+    html += `<div class="response-body">
+      <label>Response Body</label>
+      <div class="response-search-wrap" id="search-bar">
+        <input type="text" id="response-search" placeholder="Search in response..." />
+        <span id="response-search-count"></span>
+        <button id="response-search-prev" class="search-nav">◀</button>
+        <button id="response-search-next" class="search-nav">▶</button>
+      </div>
+      <div class="rb-content" id="response-body-content">${highlightedBody}</div>
+    </div>`;
   } else {
     html += `<div style="color:#666;padding:20px 0;text-align:center;font-style:italic;">No response yet</div>`;
   }
@@ -220,6 +247,50 @@ export function renderDetail(idx) {
   html += `<div class="note-area"><label>Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
 
   detailContent.innerHTML = html;
+
+  // ── Response headers expandable toggle ──
+  const headersToggle = document.getElementById('headers-toggle');
+  const headersContainer = document.getElementById('rheaders-container');
+  const toggleIcon = document.getElementById('headers-toggle-icon');
+  let headersExpanded = false;
+
+  if (headersToggle && headersContainer) {
+    // Hitung jumlah header
+    const headerRows = headersContainer.querySelectorAll('.rh-row');
+    const inner = headersContainer.querySelector('.rh-inner');
+
+    // Jika tidak ada header, sembunyikan toggle dan label
+    if (headerRows.length === 0) {
+      headersToggle.style.display = 'none';
+      headersContainer.style.display = 'none';
+    } else {
+      // Default: collapsed jika > 5, expanded jika <= 5
+      if (headerRows.length > 5) {
+        headersExpanded = false;
+        headersContainer.style.maxHeight = '0';
+        toggleIcon.textContent = '▶';
+      } else {
+        headersExpanded = true;
+        // Set max-height sesuai konten
+        const height = inner ? inner.scrollHeight : 0;
+        headersContainer.style.maxHeight = height + 'px';
+        toggleIcon.textContent = '▼';
+      }
+
+      headersToggle.addEventListener('click', () => {
+        headersExpanded = !headersExpanded;
+        if (headersExpanded) {
+          const innerNow = headersContainer.querySelector('.rh-inner');
+          const heightNow = innerNow ? innerNow.scrollHeight : 0;
+          headersContainer.style.maxHeight = heightNow + 'px';
+          toggleIcon.textContent = '▼';
+        } else {
+          headersContainer.style.maxHeight = '0';
+          toggleIcon.textContent = '▶';
+        }
+      });
+    }
+  }
 
   // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
@@ -249,6 +320,61 @@ export function renderDetail(idx) {
 
   // Selalu pasang event untuk subtab (update log saat input berubah)
   attachSubtabEvents(idx);
+
+  // ── Response body search ──
+  const searchInputResp = document.getElementById('response-search');
+  const searchCountResp = document.getElementById('response-search-count');
+  const rbContent = document.getElementById('response-body-content');
+  const prevBtnResp = document.getElementById('response-search-prev');
+  const nextBtnResp = document.getElementById('response-search-next');
+
+  let currentKeyword = '';
+  let currentMatches = [];
+  let currentMatchIndex = -1;
+
+  function updateHighlight(keyword) {
+    currentKeyword = keyword;
+    const highlighted = highlightText(formattedText, keyword);
+    rbContent.innerHTML = highlighted;
+    const matches = rbContent.querySelectorAll('.highlight');
+    currentMatches = Array.from(matches);
+    currentMatchIndex = -1;
+    if (currentMatches.length > 0) {
+      searchCountResp.textContent = `${currentMatches.length} matches`;
+      currentMatchIndex = 0;
+      currentMatches[0].classList.add('active');
+      currentMatches[0].scrollIntoView({ block: 'center' });
+    } else {
+      searchCountResp.textContent = 'No matches';
+    }
+  }
+
+  if (searchInputResp) {
+    searchInputResp.addEventListener('input', (e) => {
+      const keyword = e.target.value.trim();
+      updateHighlight(keyword);
+    });
+  }
+  if (prevBtnResp) {
+    prevBtnResp.addEventListener('click', () => {
+      if (currentMatches.length === 0) return;
+      currentMatches[currentMatchIndex]?.classList.remove('active');
+      currentMatchIndex = (currentMatchIndex - 1 + currentMatches.length) % currentMatches.length;
+      currentMatches[currentMatchIndex].classList.add('active');
+      currentMatches[currentMatchIndex].scrollIntoView({ block: 'center' });
+    });
+  }
+  if (nextBtnResp) {
+    nextBtnResp.addEventListener('click', () => {
+      if (currentMatches.length === 0) return;
+      currentMatches[currentMatchIndex]?.classList.remove('active');
+      currentMatchIndex = (currentMatchIndex + 1) % currentMatches.length;
+      currentMatches[currentMatchIndex].classList.add('active');
+      currentMatches[currentMatchIndex].scrollIntoView({ block: 'center' });
+    });
+  }
+  // Inisialisasi (tanpa keyword)
+  updateHighlight('');
 }
 
 export function renderParamsSubtab(log) {

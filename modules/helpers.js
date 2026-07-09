@@ -159,3 +159,32 @@ export function buildUrlWithParams(log) {
   // }
   return url;
 }
+
+// helpers.js (tambahkan di bagian bawah)
+
+export function formatOutputPlain(str) {
+  str = String(str ?? '').trim();
+  if (!str) return '';
+  try {
+    const pretty = JSON.stringify(JSON.parse(str), null, 2);
+    return pretty;
+  } catch {
+    return str;
+  }
+}
+
+export function highlightText(text, keyword) {
+  if (!keyword || !text) return escapeHtml(text);
+  const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(escapedKeyword, 'gi');
+  const parts = text.split(regex);
+  const matches = text.match(regex) || [];
+  let result = '';
+  for (let i = 0; i < parts.length; i++) {
+    result += escapeHtml(parts[i]);
+    if (i < matches.length) {
+      result += `<span class="highlight">${escapeHtml(matches[i])}</span>`;
+    }
+  }
+  return result;
+}
