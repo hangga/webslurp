@@ -113,7 +113,7 @@ export function selectLog(idx) {
   }
   setSelectedId(idx);
   // editingId diabaikan – selalu mode edit
-  setActiveTab('request');
+  // setActiveTab('request'); // jangan dibuka.. Awas..
   // setActiveSubTab('params');
   renderList();
   renderDetail(idx);
@@ -143,13 +143,13 @@ export function renderDetail(idx) {
 
   let html = '';
 
-  html += `<style>
-  .highlight { background-color: #ff0; color: #000; }
-  .highlight.active { background-color: #ff9632; }
-  .response-search-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .response-search-wrap input { flex: 1; padding: 4px 8px; }
-  .search-nav { padding: 4px 8px; cursor: pointer; }
-  </style>`;
+  // html += `<style>
+  // .highlight { background-color: rgb(255, 255, 104); color: #000; }
+  // .highlight.active { background-color: #ff9028; }
+  // .response-search-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  // .response-search-wrap input { flex: 1; padding: 4px 8px; }
+  // .search-nav { padding: 4px 8px; cursor: pointer; }
+  // </style>`;
 
   // Siapkan teks response yang sudah diformat (plain)
   const formattedText = log.response ? formatOutputPlain(log.response) : '';
@@ -235,13 +235,14 @@ export function renderDetail(idx) {
     const highlightedBody = highlightText(formattedText, '');
 
     html += `<div class="response-body">
-      <label>Response Body</label>
-      <div class="response-search-wrap" id="search-bar">
-        <input type="text" id="response-search" placeholder="Search in body response..." />
+    <label>Response Body</label>
+      <div id="search-bar">
+        <input type="text" id="response-search" placeholder="Search in body response..." spellcheck="false"/>
         <span id="response-search-count"></span>
         <button id="response-search-prev" class="search-nav">◀</button>
         <button id="response-search-next" class="search-nav">▶</button>
       </div>
+      
       <div class="rb-content" id="response-body-content">${highlightedBody}</div>
     </div>`;
   } else {
@@ -351,7 +352,8 @@ export function renderDetail(idx) {
       currentMatches[0].classList.add('active');
       currentMatches[0].scrollIntoView({ block: 'center' });
     } else {
-      searchCountResp.textContent = 'No matches';
+      // searchCountResp.textContent = 'No matches';
+      searchCountResp.textContent = '';
     }
   }
 
