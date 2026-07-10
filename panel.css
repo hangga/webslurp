@@ -1403,7 +1403,7 @@ body {
   padding: 6px 12px 6px 12px;
   background: linear-gradient(90deg, var(--badge-bg), var(--accent));
   border-bottom: 1px solid var(--border-color);
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
   flex-wrap: wrap;
 }
@@ -1430,7 +1430,7 @@ body {
 }
 #search-bar #search {
   flex: 1;
-  min-width: 120px;
+  /* min-width: 120px; */
 }
 #search-bar #filter-content {
   flex: 1 1 150px;
@@ -2469,4 +2469,17 @@ body {
 }
 #confirmModal button:hover {
   opacity: 0.8;
+}
+
+.highlight { background-color: rgb(255, 255, 104); color: #000; }
+.highlight.active { background-color: #ff9028; }
+#response-search {
+    flex: 1;
+    min-width: 0; /* penting agar bisa mengecil */
+}
+.response-search-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.response-search-wrap input { flex: 1; padding: 4px 8px; }
+.search-nav { padding: 4px 8px; cursor: pointer; flex: 0 0 auto;}
+#response-search-count {
+    white-space: nowrap;
 }

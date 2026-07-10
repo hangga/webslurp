@@ -1,10 +1,15 @@
-import { logs, searchInput, filterMethod, filterStatus, filterContent } from './state.js';
+import { logs, searchInput
+  , filterMethod
+  , filterStatus
+  , filterContent 
+} from './state.js';
 
 export function filterLogs() {
   const keyword = searchInput.value.toLowerCase().trim();
   const method = filterMethod.value;
   const status = filterStatus.value;
-  const content = filterContent.value.toLowerCase().trim();
+  // const content = filterContent.value.toLowerCase().trim();
+  const content = keyword;
 
   return logs.filter(log => {
     if (keyword && !log.url.toLowerCase().includes(keyword)) return false;

@@ -3,7 +3,9 @@ import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          setLogs, setSelectedId, setEditingId, setSendingId,
          setActiveTab, setActiveSubTab, ignoreStorageChange, setIgnoreStorageChange,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
-         filterStatus, filterContent, countBadge, statusText, statusCount,
+         filterStatus, 
+        //  filterContent, 
+         countBadge, statusText, statusCount,
          divider, MAX_LOGS } from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
@@ -38,7 +40,7 @@ document.addEventListener('mouseup', () => {
 searchInput.addEventListener('input', renderList);
 filterMethod.addEventListener('change', renderList);
 filterStatus.addEventListener('change', renderList);
-filterContent.addEventListener('input', renderList);
+// filterContent.addEventListener('input', renderList);
 
 document.getElementById('clear').onclick = async () => {
   const confirmed = await customConfirm(

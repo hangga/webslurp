@@ -23,15 +23,8 @@
         <option value="custom">Custom</option>
       </select>
     </div>
-
-    <button class="btn secondary" id="export-btn">
-      <img src="icons/export.png" class="btn-icon"/>
-    </button>
-    <button class="btn secondary" id="import-btn">
-        <img src="icons/import.png" class="btn-icon"/>
-    </button>
     
-    <input id="search" type="text" placeholder="Filter by URL…" spellcheck="false" />
+    <input id="search" type="text" placeholder="Filter by request" spellcheck="false" />
     <select id="filter-method">
       <option value="">All Methods</option>
       <option value="GET">GET</option>
@@ -49,7 +42,14 @@
       <option value="4xx">4xx Client Error</option>
       <option value="5xx">5xx Server Error</option>
     </select>
-    <input id="filter-content" type="text" placeholder="Search in request/response…" spellcheck="false" />
+    
+    <button class="btn secondary" id="export-btn">
+      <img src="icons/export.png" class="btn-icon"/>
+    </button>
+    <button class="btn secondary" id="import-btn">
+      <img src="icons/import.png" class="btn-icon"/>
+    </button>
+    <!-- <input id="filter-content" type="text" placeholder="Search in request/response…" spellcheck="false" /> -->
     <span id="count-badge">0</span>
     <div class="actions">
       <div class="theme-picker">
