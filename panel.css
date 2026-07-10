@@ -2438,3 +2438,20 @@ body {
 #headers-toggle-icon{
   margin-left: 14px;
 }
+
+.req-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--surface-secondary);
+    user-select: none;
+}
