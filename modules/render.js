@@ -3,7 +3,8 @@ import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
          MAX_LOGS } from './state.js';
-import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText } from './helpers.js';
+import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
+        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -40,8 +41,8 @@ export function renderList() {
     const header = document.createElement('div');
     header.className = 'group-header';
     header.innerHTML = `
-      <span class="group-toggle">▶ </span>
-      <span class="group-name">${escapeHtml(hostname)}</span>
+      <span class="group-toggle">+ </span>
+      <span class="group-name">🗂️ ${escapeHtml(hostname)}</span>
       <span class="group-count">(${groupLogs.length})</span>
     `;
     header.addEventListener('click', () => {
@@ -50,11 +51,11 @@ export function renderList() {
       const isExpanded = !body.classList.contains('collapsed');
       if (isExpanded) {
         body.classList.add('collapsed');
-        toggle.textContent = '▶  ';
+        toggle.textContent = '+  ';
         expandedGroups.delete(hostname);
       } else {
         body.classList.remove('collapsed');
-        toggle.textContent = '▼  ';
+        toggle.textContent = '-  ';
         expandedGroups.add(hostname);
       }
     });
@@ -65,19 +66,21 @@ export function renderList() {
     body.className = 'group-body';
     if (expandedGroups.has(hostname)) {
       body.classList.remove('collapsed');
-      header.querySelector('.group-toggle').textContent = '▼ ';
+      header.querySelector('.group-toggle').textContent = '- ';
     } else {
       body.classList.add('collapsed');
-      header.querySelector('.group-toggle').textContent = '▶ ';
+      header.querySelector('.group-toggle').textContent = '+ ';
     }
-
+    
     groupLogs.forEach(log => {
       const realIdx = logs.indexOf(log);
       const entry = document.createElement('div');
       const sc = statusClass(log.status);
       entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
       if (log.note) entry.classList.add('has-note');
+      const icon = getCategoryIcon(log.category);
       entry.innerHTML = `
+        <span class="req-icon">${icon}</span>
         <span class="status ${sc}">${log.status}</span>
         <span class="method">${log.method || 'GET'}</span>
         <span class="url">${escapeHtml(log.url)}</span>

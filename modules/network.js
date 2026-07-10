@@ -1,5 +1,5 @@
 import { logs, selectedId, editingId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter } from './state.js';
-import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders } from './helpers.js';
+import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderList, renderDetail } from './render.js';
 
@@ -174,10 +174,28 @@ export function startCapture() {
       responseBody = '';
     }
 
+    
     const respHeaders = {};
-    request.response.headers.forEach(h => { respHeaders[h.name] = h.value; });
+    request.response.headers.forEach(h => { respHeaders[h.name.toLowerCase()] = h.value; });
+
+    const contentType = respHeaders['content-type'] || '';
+
+    // const category = detectCategory(
+    //   contentType,
+    //   request.request.url,
+    //   request.request.postData
+    // );
 
     const bodyInfo = detectBodyInfo(postData, reqHeaders);
+
+    const category = detectCategory({
+      url: request.request.url,
+      method: request.request.method || 'GET',
+      requestHeaders: reqHeaders,
+      responseHeaders: respHeaders,
+      requestBody: bodyInfo.requestBody,
+      responseBody: responseBody
+    });
 
     const log = {
       time: new Date().toLocaleTimeString(),
@@ -194,6 +212,7 @@ export function startCapture() {
       queryParams,
       bodyMode: bodyInfo.bodyMode,
       bodyRawType: bodyInfo.bodyRawType,
+      category: category,
       formDataFields: [],
       auth: { type: 'none' }
     };
@@ -228,6 +247,7 @@ export async function sendRequest(idx) {
   let url = urlInput ? urlInput.value : log.url;
   let method = methodSelect ? methodSelect.value : (log.method || 'GET');
   let body = bodyTextarea ? bodyTextarea.value : (log.requestBody || '');
+
   if (typeof body === 'function') {
     try { body = body(); } catch (_) { body = ''; }
   }
@@ -260,9 +280,15 @@ export async function sendRequest(idx) {
 
   if (mode === 'raw') {
     const rawType = log.bodyRawType || 'text';
-    if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-    else if (rawType === 'xml' && !headers['content-type'] && !headers['Content-Type']) headers['Content-Type'] = 'application/xml';
-    if (body && method !== 'GET' && method !== 'HEAD') fetchOptions.body = body;
+    if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type']) 
+      headers['Content-Type'] = 'application/json';
+
+    else if (rawType === 'xml' && !headers['content-type'] && !headers['Content-Type']) 
+      headers['Content-Type'] = 'application/xml';
+
+    if (body && method !== 'GET' && method !== 'HEAD') 
+      fetchOptions.body = body;
+
   } else if (mode === 'form-data') {
     const formData = new FormData();
     (log.formDataFields || []).forEach(f => {
@@ -396,6 +422,7 @@ export function generateCurl(log) {
         // Escape backslash dan double quote
         // console.log('IKIH===>', body.text);
         const escaped = body.text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        // const escaped = body.text;
         parts.push(`--data-raw "${escaped}"`);
       }
     }

@@ -188,3 +188,236 @@ export function highlightText(text, keyword) {
   }
   return result;
 }
+
+// export function getCategoryIcon(category) {
+//   switch (category) {
+//     case 'html':
+//       return '🌐';
+
+//     case 'css':
+//       return '🎨';
+
+//     case 'js':
+//       return '⚡';
+
+//     case 'api':
+//       return '🔌';
+
+//     case 'graphql':
+//       return '🕸️';
+
+//     case 'xml':
+//       return '📰';
+
+//     case 'form':
+//       return '📝';
+
+//     case 'upload':
+//       return '📤';
+
+//     case 'image':
+//       return '🖼️';
+
+//     case 'video':
+//       return '🎬';
+
+//     case 'audio':
+//       return '🎵';
+
+//     case 'font':
+//       return '🔤';
+
+//     case 'pdf':
+//       return '📄';
+
+//     case 'archive':
+//       return '📦';
+
+//     case 'text':
+//       return '📃';
+
+//     case 'wasm':
+//       return '🧩';
+
+//     case 'manifest':
+//       return '📋';
+
+//     case 'stream':
+//       return '📺';
+
+//     case 'sse':
+//       return '📡';
+
+//     case 'sourcemap':
+//       return '🗺️';
+
+//     default:
+//       return '❓';
+//   }
+// }
+
+export function getCategoryIcon(category) {
+  switch (category) {
+    case 'html':
+      return '<>';
+
+    case 'css':
+      return '#';
+
+    case 'js':
+      return 'JS';
+
+    case 'api':
+      return '{}';
+
+    case 'graphql':
+      return '⬢';
+
+    case 'xml':
+      return '⟨⟩';
+
+    case 'form':
+      return '✎';
+
+    case 'upload':
+      return '⇪';
+
+    case 'image':
+      return '▣';
+
+    case 'video':
+      return '▶';
+
+    case 'audio':
+      return '♫';
+
+    case 'font':
+      return 'T';
+
+    case 'pdf':
+      return 'PDF';
+
+    case 'archive':
+      return 'ZIP';
+
+    case 'wasm':
+      return '⬡';
+
+    case 'stream':
+      return '≈';
+
+    case 'sse':
+      return '⇄';
+
+    case 'sourcemap':
+      return '⌖';
+
+    default:
+      return '•';
+  }
+}
+
+export function detectCategory({
+    url = '',
+    method = '',
+    requestHeaders = {},
+    responseHeaders = {},
+    requestBody = '',
+    responseBody = ''
+}) {
+    url = url.toLowerCase();
+
+    const reqContentType =
+        (requestHeaders['content-type'] || '').split(';')[0].toLowerCase();
+
+    const respContentType =
+        (responseHeaders['content-type'] || '').split(';')[0].toLowerCase();
+
+    const contentType = respContentType || reqContentType;
+
+    // ===== Berdasarkan Content-Type =====
+    if (contentType.includes('text/html')) return 'html';
+    if (contentType.includes('text/css')) return 'css';
+    if (contentType.includes('javascript') || contentType.includes('ecmascript')) return 'js';
+
+    if (
+        contentType.includes('application/json') ||
+        contentType.includes('application/ld+json')
+    ) {
+        const isGraphQL =
+            url.includes('/graphql') ||
+            /"query"\s*:/.test(requestBody);
+
+        return isGraphQL ? 'graphql' : 'api';
+    }
+
+    if (contentType.includes('application/xml') || contentType.includes('text/xml'))
+        return 'xml';
+
+    if (contentType.startsWith('image/')) return 'image';
+    if (contentType.startsWith('video/')) return 'video';
+    if (contentType.startsWith('audio/')) return 'audio';
+
+    if (
+        contentType.includes('woff') ||
+        contentType.includes('ttf') ||
+        contentType.includes('font')
+    )
+        return 'font';
+
+    if (contentType.includes('application/pdf')) return 'pdf';
+
+    if (contentType.includes('application/wasm')) return 'wasm';
+
+    // ===== Berdasarkan URL =====
+
+    const pathname = new URL(url).pathname.toLowerCase();
+
+    if (pathname.endsWith('.js') || pathname.endsWith('.mjs'))
+        return 'js';
+
+    if (pathname.endsWith('.css'))
+        return 'css';
+
+    if (/\.(png|jpg|jpeg|gif|svg|ico|webp|avif)$/i.test(pathname))
+        return 'image';
+
+    if (/\.(mp4|webm|mov|avi|mkv)$/i.test(pathname))
+        return 'video';
+
+    if (/\.(woff2?|ttf|otf|eot)$/i.test(pathname))
+        return 'font';
+
+    if (pathname.endsWith('.pdf'))
+        return 'pdf';
+
+    // ===== Heuristik API =====
+
+    if (
+        url.includes('/api/') ||
+        url.includes('/graphql') ||
+        /^api\./.test(new URL(url).hostname)
+    ) {
+        return url.includes('/graphql') ? 'graphql' : 'api';
+    }
+
+    // ===== Berdasarkan Body =====
+
+    if (responseBody) {
+        const body = responseBody.trim();
+
+        if (
+            (body.startsWith('{') && body.endsWith('}')) ||
+            (body.startsWith('[') && body.endsWith(']'))
+        ) {
+            return 'api';
+        }
+    }
+
+    // ===== Berdasarkan HTTP Method =====
+
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()))
+        return 'api';
+
+    return 'other';
+}
