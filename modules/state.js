@@ -67,3 +67,28 @@ export const captureFilter = {
     skipWebSocket: true,
   }
 };
+
+// ── State untuk abort / timeout / cancel ──
+export let abortController = null;
+export let cancelRequested = false;
+export let timeoutId = null;
+export let timeoutMs = 30000; // default 30 detik
+
+export function setAbortController(ctrl) { abortController = ctrl; }
+export function setCancelRequested(val) { cancelRequested = val; }
+export function setTimeoutId(id) { timeoutId = id; }
+export function setTimeoutMs(ms) { timeoutMs = ms; }
+
+// ── Fungsi untuk menyimpan dan memuat timeout dari storage ──
+import { saveSettings, loadSettings } from './storage.js';
+
+export async function loadTimeoutSetting() {
+  const settings = await loadSettings();
+  if (settings && typeof settings.timeoutMs === 'number') {
+    timeoutMs = settings.timeoutMs;
+  }
+}
+
+export function saveTimeoutSetting() {
+  saveSettings({ timeoutMs });
+}

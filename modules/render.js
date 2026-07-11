@@ -2,13 +2,13 @@ import { logs, selectedId,sendingId, activeTab, activeSubTab,
          setSelectedId, setActiveTab, setActiveSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
-         MAX_LOGS } from './state.js';
+         MAX_LOGS, timeoutMs } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
         buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
-import { sendRequest, copyAsCurl } from './network.js';
+import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
 
 // ── Render list (grouped by hostname) ──
 export function renderList() {
@@ -160,21 +160,61 @@ export function renderDetail(idx) {
     <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>`;
   
   // ── ACTIONS ──
-  html += `<div style="width:300px;">`;
-  html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
-    ${isSending ? '⏳ Sending...' : '▶ Send'}
-  </button>`;
-  html += `<button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
+  // Di bagian actions, tambahkan:
+  // html += `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">`;
+  // html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+  //   ${isSending ? '⏳ Sending...' : '▶ Send'}
+  // </button>`;
+  // if (isSending) {
+  //   html += `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>`;
+  // }
+  // html += `<button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
+  // // Tambahkan input timeout
+  // html += `
+  //   <div style="display:inline-flex; align-items:center; gap:4px; margin-left:8px;">
+  //     <label style="font-size:12px; color:#888;">Timeout (ms):</label>
+  //     <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" 
+  //           style="width:80px; padding:4px; border:1px solid #ccc; border-radius:4px; background:var(--input-bg); color:var(--text-color);" />
+  //   </div>
+  // `;
+  // html += `</div>`;
+
+  html += `
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+      ${isSending ? '⏳ Sending...' : '▶ Send'}
+    </button>
+    ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
+    <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
+    <div class="timeout-wrapper">
+      <label for="timeout-input">Timeout (ms):</label>
+      <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" />
+    </div>
+  </div>
+`;
+
+  // Status setelah send
   if (isSending) {
     html += `<div class="send-status sending"><span class="spinner"></span> Sending...</div>`;
   } else if (log.sendStatus) {
-    const label = log.sendStatus === 'success' ? '✅ Sent' : '❌ Failed';
-    const cls = log.sendStatus === 'success' ? 'success' : 'error';
+    let label, cls;
+    if (log.sendStatus === 'success') {
+      label = '✅ Sent';
+      cls = 'success';
+    } else if (log.sendStatus === 'timeout') {
+      label = '⏱ Timeout';
+      cls = 'timeout';
+    } else if (log.sendStatus === 'canceled') {
+      label = '✕ Canceled';
+      cls = 'canceled';
+    } else {
+      label = '❌ Failed';
+      cls = 'error';
+    }
     html += `<div class="send-status ${cls}">${label}</div>`;
   }
-  html += `</div>`;
   
-  html +=`
+  html += `
   </div>`;
 
   // ── Sub-tabs (selalu ditampilkan) ──
@@ -294,9 +334,28 @@ export function renderDetail(idx) {
   const sendBtn = detailContent.querySelector('#action-send');
   if (sendBtn) sendBtn.addEventListener('click', () => sendRequest(idx));
 
+  // Tombol Cancel
+  const cancelBtn = detailContent.querySelector('#action-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', () => cancelRequest(idx));
+
   // Tombol Copy cURL
   const copyBtn = detailContent.querySelector('#action-copy');
   if (copyBtn) copyBtn.addEventListener('click', () => copyAsCurl(idx));
+
+  const timeoutInput = document.getElementById('timeout-input');
+  if (timeoutInput) {
+    timeoutInput.addEventListener('change', function() {
+      const val = parseInt(this.value, 10);
+      if (!isNaN(val) && val >= 1000) {
+        import('./network.js').then(module => {
+          module.updateTimeout(val);
+        });
+      } else {
+        this.value = timeoutMs; // revert
+        statusText.textContent = 'Invalid timeout';
+      }
+    });
+  }
 
   // Note
   const noteTextarea = document.getElementById('log-note');

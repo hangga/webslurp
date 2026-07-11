@@ -2533,3 +2533,101 @@ body {
 #response-search-count {
     white-space: nowrap;
 }
+
+.send-status.timeout {
+  color: #f39c12;
+}
+.send-status.canceled {
+  color: #e67e22;
+}
+.btn-cancel {
+  background: #e74c3c;
+  color: #fff;
+}
+.btn-cancel:hover {
+  background: #c0392b;
+}
+
+/* ── Timeout Input ── */
+.timeout-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.timeout-wrapper label {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+  user-select: none;
+}
+
+#timeout-input {
+  width: 70px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-color, #555);
+  border-radius: 4px;
+  background: var(--input-bg, #2d2d2d);
+  color: var(--text-color, #d4d4d4);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#timeout-input:focus {
+  border-color: var(--accent-color, #6a9ef0);
+  box-shadow: 0 0 0 2px rgba(106, 158, 240, 0.2);
+}
+
+#timeout-input:hover {
+  border-color: var(--border-hover, #777);
+}
+
+#timeout-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Hilangkan spinner di number input */
+#timeout-input::-webkit-inner-spin-button,
+#timeout-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#timeout-input {
+  -moz-appearance: textfield;
+}
+
+/* ── Dark theme ── */
+.theme-jetbrains {
+  --text-secondary: #888;
+  --border-color: #3c3f41;
+  --input-bg: #2b2b2b;
+  --text-color: #d4d4d4;
+  --border-hover: #555;
+  --accent-color: #6a9ef0;
+}
+
+/* ── Light theme (jika diperlukan) ── */
+.theme-light {
+  --text-secondary: #666;
+  --border-color: #ccc;
+  --input-bg: #fff;
+  --text-color: #333;
+  --border-hover: #999;
+  --accent-color: #4a8ef5;
+}
+
+/* ── Responsive untuk layar kecil ── */
+@media (max-width: 600px) {
+  .timeout-wrapper {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 6px;
+  }
+  #timeout-input {
+    width: 100%;
+  }
+}
