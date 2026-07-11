@@ -1335,6 +1335,26 @@ body {
     padding: 2px;
 }
 
+.picker {
+    position: relative;
+    margin-right: 2px;
+}
+
+.picker span {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+}
+
+.picker select {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
 .search-nav{
   height: 28px;
   background: var(--accent);
@@ -1370,6 +1390,18 @@ body {
 #theme-select:focus {
   border-color: var(--accent);
 }
+.toolbtn {
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  height: 28px;
+  transition: background 0.15s, opacity 0.15s;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
 .btn {
   padding: 4px 12px;
   border: none;
@@ -1400,7 +1432,7 @@ body {
 #search-bar {
   display: flex;
   align-items: center;
-  padding: 6px 12px 6px 12px;
+  padding: 5px 10px 4px 10px;
   background: linear-gradient(90deg, var(--badge-bg), var(--accent));
   border-bottom: 1px solid var(--border-color);
   gap: 4px;
@@ -1446,6 +1478,17 @@ body {
   min-width: 28px;
   text-align: center;
   font-weight: 500;
+}
+
+.square {
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+  font-size: 11px;
+  cursor: pointer;
+  height: 28px;
+  /* transition: background 0.15s, opacity 0.15s; */
+  background: var(--accent);
+  color: var(--text-primary);
 }
 
 #filter-bar {
@@ -1532,6 +1575,10 @@ body {
 }
 #detail-content.active {
   display: flex;
+}
+
+.select{
+  width: 90px;
 }
 
 /* ── GROUP HEADER ── */
@@ -2204,7 +2251,10 @@ body {
 .response-body .rb-content .empty-hint {
   color: var(--text-secondary);
   font-style: italic;
+  height: 300px;
+  /* overflow-y: auto; */
 }
+
 .rheaders-container {
   /* max-height: 120px; */
   overflow-y: auto;

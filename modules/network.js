@@ -180,12 +180,6 @@ export function startCapture() {
 
     const contentType = respHeaders['content-type'] || '';
 
-    // const category = detectCategory(
-    //   contentType,
-    //   request.request.url,
-    //   request.request.postData
-    // );
-
     const bodyInfo = detectBodyInfo(postData, reqHeaders);
 
     const category = detectCategory({
@@ -234,11 +228,10 @@ export function startCapture() {
   });
 }
 
-// ── Send Request ──
-export async function sendRequest(idx) {
-  if (sendingId !== null) return;
+// ── Helper: ambil data dari form ──
+function getCurrentRequestData(idx) {
   const log = logs[idx];
-  if (!log) return;
+  if (!log) return null;
 
   const urlInput = document.getElementById('edit-url');
   const methodSelect = document.getElementById('edit-method');
@@ -252,7 +245,6 @@ export async function sendRequest(idx) {
     try { body = body(); } catch (_) { body = ''; }
   }
   if (typeof body !== 'string') body = String(body);
-
   url = url.trim();
 
   const headersArr = [];
@@ -261,122 +253,44 @@ export async function sendRequest(idx) {
     const val = row.querySelector('.header-value').value;
     if (key) headersArr.push({ key, value: val });
   });
-  let headers = headersToObject(headersArr);
+  const headers = headersToObject(headersArr);
 
-  const auth = log.auth || { type: 'none' };
+  return {
+    url,
+    method,
+    body,
+    headers,
+    auth: log.auth || { type: 'none' },
+    bodyMode: log.bodyMode || 'none',
+    bodyRawType: log.bodyRawType || 'text',
+    formDataFields: log.formDataFields || [],
+  };
+}
+
+// ── Helper: tambahkan header auth ──
+function applyAuthToHeaders(headers, auth) {
+  const newHeaders = { ...headers };
   if (auth.type === 'basic') {
     const creds = btoa(unescape(encodeURIComponent(`${auth.username || ''}:${auth.password || ''}`)));
-    headers['Authorization'] = `Basic ${creds}`;
+    newHeaders['Authorization'] = `Basic ${creds}`;
   } else if (auth.type === 'bearer') {
-    if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
+    if (auth.token) newHeaders['Authorization'] = `Bearer ${auth.token}`;
   } else if (auth.type === 'oauth2') {
-    if (auth.accessToken) headers['Authorization'] = `Bearer ${auth.accessToken}`;
+    if (auth.accessToken) newHeaders['Authorization'] = `Bearer ${auth.accessToken}`;
   }
-
-  headers = cleanHeaders(headers);
-
-  const mode = log.bodyMode || 'none';
-  let fetchOptions = { method, headers };
-
-  if (mode === 'raw') {
-    const rawType = log.bodyRawType || 'text';
-    if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type']) 
-      headers['Content-Type'] = 'application/json';
-
-    else if (rawType === 'xml' && !headers['content-type'] && !headers['Content-Type']) 
-      headers['Content-Type'] = 'application/xml';
-
-    if (body && method !== 'GET' && method !== 'HEAD') 
-      fetchOptions.body = body;
-
-  } else if (mode === 'form-data') {
-    const formData = new FormData();
-    (log.formDataFields || []).forEach(f => {
-      if (f.type === 'file') {
-        if (f.fileObj && f.fileObj instanceof File) formData.append(f.key, f.fileObj, f.fileObj.name);
-        else if (f.value) formData.append(f.key, f.value);
-      } else formData.append(f.key, f.value || '');
-    });
-    fetchOptions.body = formData;
-    delete headers['Content-Type'];
-    delete headers['content-type'];
-  } else if (mode === 'x-www-form-urlencoded') {
-    const params = new URLSearchParams();
-    (log.formDataFields || []).forEach(f => { if (f.key) params.append(f.key, f.value || ''); });
-    fetchOptions.body = params.toString();
-    if (!headers['content-type'] && !headers['Content-Type']) headers['Content-Type'] = 'application/x-www-form-urlencoded';
-  }
-
-  if (method === 'GET' || method === 'HEAD') delete fetchOptions.body;
-  fetchOptions.headers = headers;
-  url = ensureValidUrl(url);
-
-  setSendingId(idx);
-  delete log.sendStatus;
-  renderDetail(idx);
-
-  try {
-    statusText.textContent = 'Sending…';
-    const start = Date.now();
-    const response = await fetch(url, fetchOptions);
-    const elapsed = Date.now() - start;
-    const responseBody = await response.text();
-
-    const respHeaders = {};
-    response.headers.forEach((v, k) => { respHeaders[k] = v; });
-
-    const newLog = {
-      ...log,
-      url,
-      method,
-      requestHeaders: headers,
-      requestBody: (mode === 'form-data' || mode === 'x-www-form-urlencoded') ? '' : body,
-      response: responseBody,
-      responseHeaders: respHeaders,
-      status: response.status,
-      statusText: response.statusText,
-      time: new Date().toLocaleTimeString(),
-      sendStatus: response.ok ? 'success' : 'error',
-      sendDuration: elapsed,
-      mime: response.headers.get('content-type') || '',
-    };
-    logs[idx] = newLog;
-    await saveLogs();
-    setSendingId(null);
-    setSelectedId(idx);
-    setActiveTab('response');
-    renderList();
-    renderDetail(idx);
-    statusText.textContent = `Sent (${response.status}) in ${elapsed}ms`;
-  } catch (err) {
-    logs[idx] = { ...log, sendStatus: 'error', sendError: err.message };
-    await saveLogs();
-    setSendingId(null);
-    renderDetail(idx);
-    statusText.textContent = `❌ Error: ${err.message}`;
-    console.error('[BrutuSuite] Send error:', err);
-  }
+  return newHeaders;
 }
 
-// ── Copy cURL ──
-export function copyAsCurl(idx) {
-  const log = logs[idx];
-  if (!log) return;
-  const curl = generateCurl(log);
-  navigator.clipboard.writeText(curl).then(() => statusText.textContent = 'cURL copied!')
-    .catch(() => { const ta = document.createElement('textarea'); ta.value = curl; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); statusText.textContent = 'cURL copied!'; });
-}
-
-export function generateCurl(log) {
-  const method = log.method || 'GET';
-  const url = log.url;
-  const headers = log.requestHeaders || {};
-  const bodyMode = log.bodyMode || 'none';
-  const formFields = log.formDataFields || [];
+// ── Generate cURL dari data (bukan dari log) ──
+export function generateCurlFromData(data) {
+  const method = data.method || 'GET';
+  const url = data.url;
+  const headers = applyAuthToHeaders(data.headers || {}, data.auth || { type: 'none' });
+  const bodyMode = data.bodyMode || 'none';
+  const formFields = data.formDataFields || [];
 
   let parts = [`curl -X ${method}`];
 
-  // Headers
   let cookieHeader = '';
   for (const [k, v] of Object.entries(headers)) {
     const keyLower = k.toLowerCase();
@@ -389,7 +303,6 @@ export function generateCurl(log) {
     parts.push(`-b "${cookieHeader.replace(/"/g, '\\"')}"`);
   }
 
-  // Body handling
   if (method !== 'GET' && method !== 'HEAD') {
     if (bodyMode === 'form-data') {
       formFields.forEach(f => {
@@ -410,19 +323,15 @@ export function generateCurl(log) {
           params.append(f.key.trim(), f.value || '');
         }
       });
-      const data = params.toString();
-      if (data) {
-        // Escape backslash dan double quote
-        const escaped = data.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const dataStr = params.toString();
+      if (dataStr) {
+        const escaped = dataStr.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
         parts.push(`--data-raw "${escaped}"`);
       }
     } else if (bodyMode === 'raw') {
-      const body = log.requestBody || '';
+      const body = data.body || '';
       if (body) {
-        // Escape backslash dan double quote
-        // console.log('IKIH===>', body.text);
-        const escaped = body.text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        // const escaped = body.text;
+        const escaped = body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
         parts.push(`--data-raw "${escaped}"`);
       }
     }
@@ -430,4 +339,128 @@ export function generateCurl(log) {
 
   parts.push(`"${url}"`);
   return parts.join(' \\\n  ');
+}
+
+// ── Send Request (menggunakan data aktual dari form) ──
+export async function sendRequest(idx) {
+  if (sendingId !== null) return;
+
+  const data = getCurrentRequestData(idx);
+  if (!data) return;
+
+  let { url, method, body, headers, auth, bodyMode, formDataFields } = data;
+  headers = applyAuthToHeaders(headers, auth);
+  headers = cleanHeaders(headers);
+
+  const mode = bodyMode;
+  let fetchOptions = { method, headers };
+
+  if (mode === 'raw') {
+    const rawType = data.bodyRawType || 'text';
+    if (rawType === 'json' && !headers['content-type'] && !headers['Content-Type'])
+      headers['Content-Type'] = 'application/json';
+    else if (rawType === 'xml' && !headers['content-type'] && !headers['Content-Type'])
+      headers['Content-Type'] = 'application/xml';
+    if (body && method !== 'GET' && method !== 'HEAD')
+      fetchOptions.body = body;
+  } else if (mode === 'form-data') {
+    const formData = new FormData();
+    (formDataFields || []).forEach(f => {
+      if (f.type === 'file') {
+        if (f.fileObj && f.fileObj instanceof File) formData.append(f.key, f.fileObj, f.fileObj.name);
+        else if (f.value) formData.append(f.key, f.value);
+      } else formData.append(f.key, f.value || '');
+    });
+    fetchOptions.body = formData;
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+  } else if (mode === 'x-www-form-urlencoded') {
+    const params = new URLSearchParams();
+    (formDataFields || []).forEach(f => { if (f.key) params.append(f.key, f.value || ''); });
+    fetchOptions.body = params.toString();
+    if (!headers['content-type'] && !headers['Content-Type'])
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  }
+
+  if (method === 'GET' || method === 'HEAD') delete fetchOptions.body;
+  fetchOptions.headers = headers;
+  url = ensureValidUrl(url);
+
+  setSendingId(idx);
+  delete logs[idx]?.sendStatus;
+  renderDetail(idx);
+
+  try {
+    statusText.textContent = 'Sending…';
+    const start = Date.now();
+    const response = await fetch(url, fetchOptions);
+    const elapsed = Date.now() - start;
+    const responseBody = await response.text();
+
+    const respHeaders = {};
+    response.headers.forEach((v, k) => { respHeaders[k] = v; });
+
+    const newLog = {
+      ...logs[idx],
+      url,
+      method,
+      requestHeaders: data.headers, // simpan headers tanpa auth (auth tetap terpisah)
+      requestBody: (mode === 'form-data' || mode === 'x-www-form-urlencoded') ? '' : body,
+      response: responseBody,
+      responseHeaders: respHeaders,
+      status: response.status,
+      statusText: response.statusText,
+      time: new Date().toLocaleTimeString(),
+      sendStatus: response.ok ? 'success' : 'error',
+      sendDuration: elapsed,
+      mime: response.headers.get('content-type') || '',
+    };
+    logs[idx] = newLog;
+    await saveLogs();
+    setSendingId(null);
+    setSelectedId(idx);
+    setActiveTab('response');
+    renderList();
+    renderDetail(idx);
+    statusText.textContent = `Sent (${response.status}) in ${elapsed}ms`;
+  } catch (err) {
+    logs[idx] = { ...logs[idx], sendStatus: 'error', sendError: err.message };
+    await saveLogs();
+    setSendingId(null);
+    renderDetail(idx);
+    statusText.textContent = `❌ Error: ${err.message}`;
+    console.error('[BrutuSuite] Send error:', err);
+  }
+}
+
+// ── Copy cURL (menggunakan data aktual dari form) ──
+export function copyAsCurl(idx) {
+  if (idx === undefined || idx === null) return;
+
+  const data = getCurrentRequestData(idx);
+  if (!data) return;
+
+  // Update log dengan data terbaru dari form (tanpa response)
+  logs[idx] = {
+    ...logs[idx],
+    url: data.url,
+    method: data.method,
+    requestHeaders: data.headers, // tanpa auth
+    requestBody: data.body,
+    // bodyMode, formDataFields, auth tetap dari log (tidak berubah)
+  };
+  saveLogs();
+
+  const curl = generateCurlFromData(data);
+  navigator.clipboard.writeText(curl)
+    .then(() => statusText.textContent = 'cURL copied!')
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = curl;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      statusText.textContent = 'cURL copied!';
+    });
 }

@@ -143,18 +143,8 @@ export function renderDetail(idx) {
 
   let html = '';
 
-  // html += `<style>
-  // .highlight { background-color: rgb(255, 255, 104); color: #000; }
-  // .highlight.active { background-color: #ff9028; }
-  // .response-search-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  // .response-search-wrap input { flex: 1; padding: 4px 8px; }
-  // .search-nav { padding: 4px 8px; cursor: pointer; }
-  // </style>`;
-
   // Siapkan teks response yang sudah diformat (plain)
   const formattedText = log.response ? formatOutputPlain(log.response) : '';
-
-  
 
   // ── TABS ──
   html += `<div class="detail-tabs">
@@ -163,8 +153,6 @@ export function renderDetail(idx) {
   </div>`;
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
-
-  
 
   // ── Request meta (selalu editable) ──
   html += `<div class="request-meta">
@@ -236,13 +224,6 @@ export function renderDetail(idx) {
 
     html += `<div class="response-body">
     <label>Response Body</label>
-      <div id="search-bar">
-        <input type="text" id="response-search" placeholder="Search in body response..." spellcheck="false"/>
-        <span id="response-search-count"></span>
-        <button id="response-search-prev" class="search-nav">◀</button>
-        <button id="response-search-next" class="search-nav">▶</button>
-      </div>
-      
       <div class="rb-content" id="response-body-content">${highlightedBody}</div>
     </div>`;
   } else {
@@ -330,7 +311,6 @@ export function renderDetail(idx) {
 
   // ── Response body search ──
   const searchInputResp = document.getElementById('response-search');
-  const searchCountResp = document.getElementById('response-search-count');
   const rbContent = document.getElementById('response-body-content');
   const prevBtnResp = document.getElementById('response-search-prev');
   const nextBtnResp = document.getElementById('response-search-next');
@@ -347,13 +327,12 @@ export function renderDetail(idx) {
     currentMatches = Array.from(matches);
     currentMatchIndex = -1;
     if (currentMatches.length > 0) {
-      searchCountResp.textContent = `${currentMatches.length} matches`;
+      statusCount.textContent = `${currentMatches.length} matches`;
       currentMatchIndex = 0;
       currentMatches[0].classList.add('active');
       currentMatches[0].scrollIntoView({ block: 'center' });
     } else {
-      // searchCountResp.textContent = 'No matches';
-      searchCountResp.textContent = '';
+      statusCount.textContent = '';
     }
   }
 
@@ -421,40 +400,6 @@ export function renderParamsSubtab(log) {
 
   return html;
 }
-
-// export function renderAuthSubtab(log) {
-//   const auth = log.auth || { type: 'none' };
-//   let html = `<div class="sub-panel ${activeSubTab === 'auth' ? 'active' : ''}" data-subpanel="auth">
-//     <div class="auth-row"><label>Auth Type</label><select id="auth-type">
-//       <option value="none" ${auth.type === 'none' ? 'selected' : ''}>None</option>
-//       <option value="basic" ${auth.type === 'basic' ? 'selected' : ''}>Basic Auth</option>
-//       <option value="bearer" ${auth.type === 'bearer' ? 'selected' : ''}>Bearer Token</option>
-//       <option value="oauth2" ${auth.type === 'oauth2' ? 'selected' : ''}>OAuth 2.0</option>
-//     </select></div>`;
-//   if (auth.type === 'basic') {
-//     html += `<div class="auth-fields"><div class="auth-row"><label>Username</label><input id="auth-basic-username" value="${escapeHtml(auth.username || '')}" /></div>
-//     <div class="auth-row"><label>Password</label><input id="auth-basic-password" type="password" value="${escapeHtml(auth.password || '')}" /></div></div>`;
-//   } else if (auth.type === 'bearer') {
-//     html += `<div class="auth-fields"><div class="auth-row"><label>Token</label><input id="auth-bearer-token" value="${escapeHtml(auth.token || '')}" /></div></div>`;
-//   } else if (auth.type === 'oauth2') {
-//     const grantType = auth.grantType || 'client_credentials';
-//     html += `<div class="auth-fields">
-//       <div class="auth-row"><label>Grant Type</label><select id="auth-oauth2-grant">
-//         <option value="client_credentials" ${grantType === 'client_credentials' ? 'selected' : ''}>Client Credentials</option>
-//         <option value="password" ${grantType === 'password' ? 'selected' : ''}>Password Grant</option>
-//       </select></div>
-//       <div class="auth-row"><label>Token URL</label><input id="auth-oauth2-tokenurl" value="${escapeHtml(auth.tokenUrl || '')}" /></div>
-//       <div class="auth-row"><label>Client ID</label><input id="auth-oauth2-clientid" value="${escapeHtml(auth.clientId || '')}" /></div>
-//       <div class="auth-row"><label>Client Secret</label><input id="auth-oauth2-clientsecret" type="password" value="${escapeHtml(auth.clientSecret || '')}" /></div>
-//       <div class="auth-row"><label>Scope</label><input id="auth-oauth2-scope" value="${escapeHtml(auth.scope || '')}" /></div>
-//       ${grantType === 'password' ? `<div class="auth-row"><label>Username</label><input id="auth-oauth2-username" value="${escapeHtml(auth.username || '')}" /></div><div class="auth-row"><label>Password</label><input id="auth-oauth2-password" type="password" value="${escapeHtml(auth.password || '')}" /></div>` : ''}
-//       <div class="auth-row"><label>Access Token</label><input id="auth-oauth2-accesstoken" value="${escapeHtml(auth.accessToken || '')}" /></div>
-//       <div class="auth-row"><button id="auth-oauth2-fetch-token" class="btn secondary">Get Access Token</button></div>
-//     </div>`;
-//   }
-//   html += `</div>`;
-//   return html;
-// }
 
 export function renderHeadersSubtab(log) {
   const headersArr = headersToArray(log.requestHeaders || {});

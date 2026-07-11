@@ -4,10 +4,9 @@ import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
          setActiveTab, setActiveSubTab, ignoreStorageChange, setIgnoreStorageChange,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
          filterStatus, 
-        //  filterContent, 
          countBadge, statusText, statusCount,
          divider, MAX_LOGS } from './modules/state.js';
-import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter } from './modules/storage.js';
+import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
@@ -44,7 +43,7 @@ filterStatus.addEventListener('change', renderList);
 
 document.getElementById('clear').onclick = async () => {
   const confirmed = await customConfirm(
-    'Are you sure you want to clear all logs?\n\nThis action cannot be undone.'
+    'Are you sure you want to clear all logs?\n\nUnsaved logs will be permanently deleted. Save them to a file first if you want to keep a copy.\n\nThis action cannot be undone.'
   );
 
   if (!confirmed) return;
@@ -198,6 +197,36 @@ function customConfirm(message) {
     };
   });
 }
+
+// Ekspor
+document.getElementById('export-btn')?.addEventListener('click', exportLogsToFile);
+
+// Impor
+document.getElementById('import-btn')?.addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      await importLogsFromFile(file);
+      // Refresh tampilan setelah import
+      renderList();
+      // Tampilkan detail log pertama (jika ada)
+      if (logs.length > 0) {
+        setSelectedId(0);
+        renderDetail(0);
+      } else {
+        // kosongkan detail
+        document.getElementById('detail-content').innerHTML = '<p class="empty">No logs</p>';
+      }
+    } catch (err) {
+      alert('Gagal import: ' + err.message);
+    }
+  };
+  input.click();
+});
 
 // Panggil setelah DOM siap
 initCaptureFilter();

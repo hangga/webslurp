@@ -9,7 +9,11 @@ export const MAX_LOGS = 200;
 export let ignoreStorageChange = false;
 
 // ── Setters ──
-export function setLogs(newLogs) { logs = newLogs; }
+// export function setLogs(newLogs) { logs = newLogs; }
+export function setLogs(newLogs) {
+  logs.length = 0;
+  logs.push(...newLogs);
+}
 export function setSelectedId(id) { selectedId = id; }
 export function setEditingId(id) { editingId = id; }
 export function setSendingId(id) { sendingId = id; }

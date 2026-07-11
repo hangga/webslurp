@@ -161,7 +161,6 @@ export function buildUrlWithParams(log) {
 }
 
 // helpers.js (tambahkan di bagian bawah)
-
 export function formatOutputPlain(str) {
   str = String(str ?? '').trim();
   if (!str) return '';
