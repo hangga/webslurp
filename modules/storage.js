@@ -1,18 +1,61 @@
 // storage.js
 import { logs, setLogs, ignoreStorageChange, setIgnoreStorageChange } from './state.js';
 
+const STORAGE_KEY = 'brutusuite_logs';
+const SETTINGS_KEY = 'brutusuite_settings';
+
 export async function saveLogs() {
   setIgnoreStorageChange(true);
   try {
-    await chrome.storage.local.set({ logs });
+    // await chrome.storage.local.set({ logs });
+    const data = JSON.stringify(logs);
+    await chrome.storage.local.set({ [STORAGE_KEY]: data });
+  } catch{
+    console.warn('[BrutuSuite] Gagal menyimpan logs:', e);
   } finally {
     setIgnoreStorageChange(false);
   }
 }
 
+// export async function loadLogs() {
+//   const result = await chrome.storage.local.get('logs');
+//   setLogs(result.logs || []);
+// }
 export async function loadLogs() {
-  const result = await chrome.storage.local.get('logs');
-  setLogs(result.logs || []);
+  try {
+    const result = await chrome.storage.local.get(STORAGE_KEY);
+    if (result[STORAGE_KEY]) {
+      const parsed = JSON.parse(result[STORAGE_KEY]);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('[BrutuSuite] Gagal memuat logs:', e);
+  }
+  return [];
+}
+
+// ── Settings ──
+export async function saveSettings(settings) {
+  try {
+    // Ambil settings yang sudah ada, lalu merge
+    const existing = await loadSettings();
+    const merged = { ...existing, ...settings };
+    await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
+  } catch (e) {
+    console.warn('[BrutuSuite] Gagal menyimpan settings:', e);
+  }
+}
+
+export async function loadSettings() {
+  try {
+    const result = await chrome.storage.local.get(SETTINGS_KEY);
+    if (result[SETTINGS_KEY]) {
+      return result[SETTINGS_KEY];
+    }
+  } catch (e) {
+    console.warn('[BrutuSuite] Gagal memuat settings:', e);
+  }
+  return {};
 }
 
 export async function saveCaptureFilter(filter) {

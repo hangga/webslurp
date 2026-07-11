@@ -9,7 +9,7 @@ import { logs, selectedId,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
          filterStatus, 
          countBadge, statusText, statusCount,
-         divider, MAX_LOGS } from './modules/state.js';
+         divider, MAX_LOGS, loadTimeoutSetting} from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
@@ -72,6 +72,7 @@ chrome.storage.onChanged.addListener((changes, ns) => {
 (async function init() {
   await refresh();
   await loadTheme();
+  await loadTimeoutSetting();
   startCapture();
   statusText.textContent = 'Listening…';
   console.log('[BrutuSuite] Panel siap, menunggu request...');

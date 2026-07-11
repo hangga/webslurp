@@ -78,3 +78,17 @@ export function setAbortController(ctrl) { abortController = ctrl; }
 export function setCancelRequested(val) { cancelRequested = val; }
 export function setTimeoutId(id) { timeoutId = id; }
 export function setTimeoutMs(ms) { timeoutMs = ms; }
+
+// ── Fungsi untuk menyimpan dan memuat timeout dari storage ──
+import { saveSettings, loadSettings } from './storage.js';
+
+export async function loadTimeoutSetting() {
+  const settings = await loadSettings();
+  if (settings && typeof settings.timeoutMs === 'number') {
+    timeoutMs = settings.timeoutMs;
+  }
+}
+
+export function saveTimeoutSetting() {
+  saveSettings({ timeoutMs });
+}

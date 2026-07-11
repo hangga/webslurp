@@ -2,7 +2,7 @@ import { logs, selectedId,sendingId, activeTab, activeSubTab,
          setSelectedId, setActiveTab, setActiveSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
-         MAX_LOGS } from './state.js';
+         MAX_LOGS, timeoutMs } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
         buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon } from './helpers.js';
 import { saveLogs } from './storage.js';
@@ -160,15 +160,38 @@ export function renderDetail(idx) {
     <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>`;
   
   // ── ACTIONS ──
-  html += `<div style="width:300px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">`;
-  html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
-    ${isSending ? '⏳ Sending...' : '▶ Send'}
-  </button>`;
-  if (isSending) {
-    html += `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>`;
-  }
-  html += `<button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
-  html += `</div>`;
+  // Di bagian actions, tambahkan:
+  // html += `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">`;
+  // html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+  //   ${isSending ? '⏳ Sending...' : '▶ Send'}
+  // </button>`;
+  // if (isSending) {
+  //   html += `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>`;
+  // }
+  // html += `<button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
+  // // Tambahkan input timeout
+  // html += `
+  //   <div style="display:inline-flex; align-items:center; gap:4px; margin-left:8px;">
+  //     <label style="font-size:12px; color:#888;">Timeout (ms):</label>
+  //     <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" 
+  //           style="width:80px; padding:4px; border:1px solid #ccc; border-radius:4px; background:var(--input-bg); color:var(--text-color);" />
+  //   </div>
+  // `;
+  // html += `</div>`;
+
+  html += `
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+      ${isSending ? '⏳ Sending...' : '▶ Send'}
+    </button>
+    ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
+    <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
+    <div class="timeout-wrapper">
+      <label for="timeout-input">Timeout (ms):</label>
+      <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" />
+    </div>
+  </div>
+`;
 
   // Status setelah send
   if (isSending) {
@@ -318,6 +341,21 @@ export function renderDetail(idx) {
   // Tombol Copy cURL
   const copyBtn = detailContent.querySelector('#action-copy');
   if (copyBtn) copyBtn.addEventListener('click', () => copyAsCurl(idx));
+
+  const timeoutInput = document.getElementById('timeout-input');
+  if (timeoutInput) {
+    timeoutInput.addEventListener('change', function() {
+      const val = parseInt(this.value, 10);
+      if (!isNaN(val) && val >= 1000) {
+        import('./network.js').then(module => {
+          module.updateTimeout(val);
+        });
+      } else {
+        this.value = timeoutMs; // revert
+        statusText.textContent = 'Invalid timeout';
+      }
+    });
+  }
 
   // Note
   const noteTextarea = document.getElementById('log-note');

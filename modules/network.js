@@ -2,7 +2,7 @@ import { logs, selectedId, sendingId, activeTab, setSendingId, setSelectedId, se
           abortController, cancelRequested, timeoutId, timeoutMs,
           setAbortController, setCancelRequested, setTimeoutId } from './state.js';
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
-import { saveLogs } from './storage.js';
+import { saveLogs, saveSettings } from './storage.js';
 import { renderList, renderDetail } from './render.js';
 
 // ── Helper deteksi tipe ──
@@ -403,12 +403,13 @@ export async function sendRequest(idx) {
   setCancelRequested(false);
   let isTimeout = false;
 
-  // Atur timeout
+  // Gunakan timeoutMs dari state
   const tid = setTimeout(() => {
     isTimeout = true;
     controller.abort();
   }, timeoutMs);
   setTimeoutId(tid);
+
 
   setSendingId(idx);
   delete logs[idx]?.sendStatus;
@@ -491,6 +492,21 @@ export async function sendRequest(idx) {
     }
     renderList();
   }
+}
+
+// ── Fungsi untuk mengubah timeout dan menyimpannya ──
+export function updateTimeout(newTimeoutMs) {
+  const ms = parseInt(newTimeoutMs, 10);
+  if (isNaN(ms) || ms < 1000) {
+    statusText.textContent = 'Timeout must be at least 1000ms';
+    return;
+  }
+  // Update state
+  import('./state.js').then(module => {
+    module.setTimeoutMs(ms);
+    module.saveTimeoutSetting();
+    statusText.textContent = `Timeout set to ${ms}ms`;
+  });
 }
 
 // ── Copy cURL (menggunakan data aktual dari form) ──
