@@ -14,10 +14,7 @@
       <img src="icons/reload.png" class="btn-icon" title="Reload"/>
     </button>
 
-    <button id="clear" class="toolbtn" title="Clear All" style="padding:4px;">
-      <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;"/>
-    </button>
-
+    
     <div class="theme-picker">
       <img src="icons/filter.png" class="theme-icon" title="Filter"
           style="width:26px;height:26px;padding-top:4px;"/>
@@ -35,25 +32,6 @@
         placeholder="Search/ filter requests..."
         spellcheck="false"/>
 
-    <select id="filter-method" class="select">
-      <option value="">All Methods</option>
-      <option value="GET">GET</option>
-      <option value="POST">POST</option>
-      <option value="PUT">PUT</option>
-      <option value="DELETE">DELETE</option>
-      <option value="PATCH">PATCH</option>
-      <option value="HEAD">HEAD</option>
-      <option value="OPTIONS">OPTIONS</option>
-    </select>
-
-    <select id="filter-status" class="select">
-      <option value="">All Status</option>
-      <option value="2xx">2xx Success</option>
-      <option value="3xx">3xx Redirect</option>
-      <option value="4xx">4xx Client Error</option>
-      <option value="5xx">5xx Server Error</option>
-    </select>
-
     <!-- Response Search -->
     <input
         id="response-search"
@@ -64,15 +42,7 @@
     <button id="response-search-prev" class="search-nav">◀</button>
     <button id="response-search-next" class="search-nav">▶</button>
 
-    <!-- File -->
-    <button class="btn primary" id="import-btn" title="Open from file">
-      <img src="icons/open-folder.png" class="btn-icon" title="Open from file"/>
-    </button>
-
-    <button class="btn primary" id="export-btn" title="Save to file">
-      <img src="icons/save.png" class="btn-icon" title="Save to file"/>
-    </button>
-
+    
     <!-- Status -->
     <span id="count-badge">0</span>
 
@@ -115,18 +85,44 @@
           <label><input type="checkbox" id="filter-skip-js" checked> Skip JavaScript</label>
           <label><input type="checkbox" id="filter-skip-fonts" checked> Skip Fonts</label>
           <label><input type="checkbox" id="filter-skip-media" checked> Skip Media</label>
-          <label><input type="checkbox" id="filter-skip-websocket" checked> Skip WebSocket</label>
+          <label><input type="checkbox" id="filter-skip-websocket" checked> Skip WebSocket</label>     
       </div>
+      <div id="files">
+          <!-- File -->
+          <button id="clear" class="toolmenu" title="Clear All" >
+            <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;"/>
+          </button>
+          <button class="toolmenu" id="import-btn" title="Open from file">
+            <img src="icons/open-folder.png" class="btn-icon" title="Open from file"/>
+          </button>
+
+          <button class="toolmenu" id="export-btn" title="Save to file">
+            <img src="icons/save.png" class="btn-icon" title="Save to file"/>
+          </button>
+
+          <select id="filter-method" class="select" style="margin-left: 24px;">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PATCH">PATCH</option>
+            <option value="HEAD">HEAD</option>
+            <option value="OPTIONS">OPTIONS</option>
+          </select>
+
+          <select id="filter-status" class="select">
+            <option value="">All Status</option>
+            <option value="2xx">2xx Success</option>
+            <option value="3xx">3xx Redirect</option>
+            <option value="4xx">4xx Client Error</option>
+            <option value="5xx">5xx Server Error</option>
+          </select>
+        </div>
       <div id="log-list-container"></div>
     </div>
     <div id="divider"></div>
     <div id="detail-panel">
-      <!-- <div id="search-bar">
-        <input type="text" id="response-search" placeholder="Search in body response..." spellcheck="false"/>
-        <span id="response-search-count"></span>
-        <button id="response-search-prev" class="search-nav">◀</button>
-        <button id="response-search-next" class="search-nav">▶</button>
-      </div> -->
       <div id="detail-empty">Select a request to view details</div>
       <div id="detail-content"></div>
     </div>
