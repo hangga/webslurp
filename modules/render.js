@@ -309,7 +309,7 @@ export function renderDetail(idx) {
   // Selalu pasang event untuk subtab (update log saat input berubah)
   attachSubtabEvents(idx);
 
-  // ── Response body search ──
+  // ── Response body search ─────────────────────────────────────────────
   const searchInputResp = document.getElementById('response-search');
   const rbContent = document.getElementById('response-body-content');
   const prevBtnResp = document.getElementById('response-search-prev');
@@ -319,49 +319,124 @@ export function renderDetail(idx) {
   let currentMatches = [];
   let currentMatchIndex = -1;
 
-  function updateHighlight(keyword) {
-    currentKeyword = keyword;
-    const highlighted = highlightText(formattedText, keyword);
-    rbContent.innerHTML = highlighted;
-    const matches = rbContent.querySelectorAll('.highlight');
-    currentMatches = Array.from(matches);
-    currentMatchIndex = -1;
-    if (currentMatches.length > 0) {
-      statusCount.textContent = `${currentMatches.length} matches`;
-      currentMatchIndex = 0;
-      currentMatches[0].classList.add('active');
-      currentMatches[0].scrollIntoView({ block: 'center' });
-    } else {
-      statusCount.textContent = '';
-    }
+  // ------------------------------------------------------------
+
+  function debounce(fn, delay = 250) {
+    let timer;
+
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
   }
 
+  // ------------------------------------------------------------
+
+  function clearHighlight() {
+    rbContent.textContent = formattedText;
+    currentMatches = [];
+    currentMatchIndex = -1;
+    statusCount.textContent = '';
+  }
+
+  // ------------------------------------------------------------
+
+  function updateHighlight(keyword) {
+    keyword = keyword.trim();
+
+    // keyword sama → tidak usah render lagi
+    if (keyword === currentKeyword) return;
+
+    currentKeyword = keyword;
+
+    // kosong
+    if (!keyword) {
+      clearHighlight();
+      return;
+    }
+
+    // minimal 2 karakter
+    if (keyword.length < 2) {
+      clearHighlight();
+      return;
+    }
+
+    // keyword tidak ada → skip regex
+    if (!formattedText.toLowerCase().includes(keyword.toLowerCase())) {
+      clearHighlight();
+      return;
+    }
+
+    requestAnimationFrame(() => {
+
+      rbContent.innerHTML = highlightText(formattedText, keyword);
+
+      currentMatches = [
+        ...rbContent.querySelectorAll('.highlight')
+      ];
+
+      currentMatchIndex = -1;
+
+      if (currentMatches.length === 0) {
+        statusCount.textContent = '';
+        return;
+      }
+
+      statusCount.textContent = `${currentMatches.length} matches`;
+
+      currentMatchIndex = 0;
+
+      currentMatches[0].classList.add('active');
+
+      // sengaja TIDAK scroll di sini
+    });
+  }
+
+  // ------------------------------------------------------------
+
   if (searchInputResp) {
-    searchInputResp.addEventListener('input', (e) => {
-      const keyword = e.target.value.trim();
-      updateHighlight(keyword);
+    searchInputResp.addEventListener(
+      'input',
+      debounce((e) => {
+        updateHighlight(e.target.value);
+      }, 250)
+    );
+  }
+
+  // ------------------------------------------------------------
+
+  function gotoMatch(index) {
+
+    if (!currentMatches.length) return;
+
+    currentMatches[currentMatchIndex]?.classList.remove('active');
+
+    currentMatchIndex =
+      (index + currentMatches.length) % currentMatches.length;
+
+    const el = currentMatches[currentMatchIndex];
+
+    el.classList.add('active');
+
+    el.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
     });
   }
-  if (prevBtnResp) {
-    prevBtnResp.addEventListener('click', () => {
-      if (currentMatches.length === 0) return;
-      currentMatches[currentMatchIndex]?.classList.remove('active');
-      currentMatchIndex = (currentMatchIndex - 1 + currentMatches.length) % currentMatches.length;
-      currentMatches[currentMatchIndex].classList.add('active');
-      currentMatches[currentMatchIndex].scrollIntoView({ block: 'center' });
-    });
-  }
-  if (nextBtnResp) {
-    nextBtnResp.addEventListener('click', () => {
-      if (currentMatches.length === 0) return;
-      currentMatches[currentMatchIndex]?.classList.remove('active');
-      currentMatchIndex = (currentMatchIndex + 1) % currentMatches.length;
-      currentMatches[currentMatchIndex].classList.add('active');
-      currentMatches[currentMatchIndex].scrollIntoView({ block: 'center' });
-    });
-  }
-  // Inisialisasi (tanpa keyword)
-  updateHighlight('');
+
+  // ------------------------------------------------------------
+
+  prevBtnResp?.addEventListener('click', () => {
+    gotoMatch(currentMatchIndex - 1);
+  });
+
+  nextBtnResp?.addEventListener('click', () => {
+    gotoMatch(currentMatchIndex + 1);
+  });
+
+  // ------------------------------------------------------------
+
+  clearHighlight();
 }
 
 export function renderParamsSubtab(log) {
