@@ -1,4 +1,6 @@
-import { logs, selectedId, editingId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter } from './state.js';
+import { logs, selectedId, 
+        // editingId, 
+        sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter } from './state.js';
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderList, renderDetail } from './render.js';
