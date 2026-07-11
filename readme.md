@@ -25,7 +25,7 @@ Think **Burp-style request replay with a Postman-like UI**, built directly into 
 ![screenshot1](screenshot/brutu%202026-07-11%20at%2014.13.35.png)
 
 
-[![Demo](preview.gif)](https://github.com/user-attachments/assets/ed3c7c29-96d2-4f76-9002-273b80564f0c)
+[![Demo](preview.gif)](https://github.com/user-attachments/assets/ec35c36c-55e8-49ef-9a77-7fa610949520)
 
 ## Features
 
