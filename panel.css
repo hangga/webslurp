@@ -1272,11 +1272,26 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 16px;
+  padding: 6px 6px;
   background: var(--bg-toolbar);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
+
+.toolmenu{
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  height: 24px;
+  transition: background 0.15s, opacity 0.15s;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  width: 40px;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -1510,8 +1525,17 @@ body {
   /* padding: 6px 12px; */
   padding: 8px 8px 8px 12px;
   /* background: var(--bg-search); */
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--divider-color);
   gap: 8px;
+  flex-shrink: 0;
+}
+
+#files{
+  display: flex;
+  align-items: center;
+  padding: 4px 6px 4px 6px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -1579,6 +1603,14 @@ body {
 
 .select{
   width: 90px;
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
 }
 
 /* ── GROUP HEADER ── */

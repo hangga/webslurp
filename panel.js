@@ -46,6 +46,12 @@ filterStatus.addEventListener('change', renderList);
 // filterContent.addEventListener('input', renderList);
 
 document.getElementById('clear').onclick = async () => {
+  // Cek apakah ada logs
+  if (logs.length === 0) {
+    statusText.textContent = 'No logs to clear';
+    return;
+  }
+  
   const confirmed = await customConfirm(
     'Are you sure you want to clear all logs?\n\nUnsaved logs will be permanently deleted. Save them to a file first if you want to keep a copy.\n\nThis action cannot be undone.'
   );
