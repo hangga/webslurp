@@ -65,6 +65,7 @@ export const captureFilter = {
     skipFonts: true,
     skipMedia: true,
     skipWebSocket: true,
+    skipDocuments: true, // baru
   }
 };
 

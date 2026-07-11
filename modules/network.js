@@ -6,11 +6,13 @@ import { saveLogs, saveSettings } from './storage.js';
 import { renderList, renderDetail } from './render.js';
 
 // ── Helper deteksi tipe ──
+// ── Helper deteksi tipe ──
 function detectType(request) {
   const url = request.request.url;
   const mime = request.response?.mimeType || '';
+  const postData = request.request.postData || '';
 
-  // 1. Coba dari request.type jika tersedia (beberapa versi mendukung)
+  // 1. Coba dari request.type jika tersedia
   if (request.type) {
     return request.type;
   }
@@ -39,6 +41,39 @@ function detectType(request) {
   }
   if (url.startsWith('ws://') || url.startsWith('wss://')) return 'WebSocket';
 
+  // 5. Deteksi API dari request body
+  if (postData && typeof postData === 'string' && postData.length > 0) {
+    // Jika ada body, kemungkinan API
+    try {
+      JSON.parse(postData);
+      return 'API (JSON)';
+    } catch {
+      // Bukan JSON, mungkin form atau lainnya
+      if (postData.includes('=') && !postData.includes('\n')) {
+        return 'API (Form)';
+      }
+    }
+  }
+
+  // 6. Deteksi dari header Accept
+  for (const h of headers) {
+    if (h.name.toLowerCase() === 'accept') {
+      const val = h.value.toLowerCase();
+      if (val.includes('json')) return 'API (JSON)';
+      if (val.includes('xml')) return 'API (XML)';
+    }
+  }
+
+  // 7. Deteksi dari URL path
+  const path = url.split('?')[0];
+  const pathSegments = path.split('/').filter(Boolean);
+  const lastSegment = pathSegments.pop() || '';
+  if (lastSegment.includes('api') || lastSegment.includes('graphql') || 
+      path.includes('/api/') || path.includes('/graphql/') ||
+      path.includes('/rest/')) {
+    return 'API';
+  }
+
   return 'Other';
 }
 
@@ -52,15 +87,58 @@ function shouldCapture(request) {
   // Mode 'all' → tangkap semua (kecuali internal yang sudah difilter di luar)
   if (mode === 'all') return true;
 
-  // Mode 'api' → hanya tangkap request yang bukan statis, bukan OPTIONS, bukan WebSocket
+  // Mode 'api' → hanya tangkap API (REST, GraphQL, dll)
   if (mode === 'api') {
-    const skipTypes = ['Image','Stylesheet','Script','Font','Media','WebSocket'];
+    // Skip statis, media, WebSocket
+    const skipTypes = ['Image', 'Stylesheet', 'Script', 'Font', 'Media', 'WebSocket'];
     if (skipTypes.includes(type)) return false;
+    
+    // Skip OPTIONS
     if (method === 'OPTIONS') return false;
-    // Optional: filter hanya request dengan response JSON (jika ingin lebih ketat)
-    // const mime = request.response?.mimeType || '';
-    // if (!mime.includes('json')) return false;
-    return true;
+    
+    // Deteksi jika ini API:
+    // - Ada response JSON/XML
+    // - URL mengandung api/graphql
+    // - Ada request body JSON
+    const mime = request.response?.mimeType || '';
+    const postData = request.request.postData || '';
+    
+    // Jika response MIME adalah JSON/XML, anggap API
+    if (mime.includes('json') || mime.includes('xml')) return true;
+    
+    // Jika URL mengandung api/graphql/rest, anggap API
+    if (url.includes('/api/') || url.includes('/graphql/') || 
+        url.includes('/rest/') || url.includes('api.') || 
+        url.includes('graphql.')) {
+      return true;
+    }
+    
+    // Jika ada postData dan bukan file upload, anggap API
+    if (postData && typeof postData === 'string' && postData.length > 0) {
+      // Coba parse JSON
+      try {
+        JSON.parse(postData);
+        return true;
+      } catch {
+        // Cek apakah form data (ada key=value)
+        if (postData.includes('=') && !postData.includes('\n')) {
+          return true;
+        }
+      }
+    }
+    
+    // Jika response bukan HTML dan ada header Accept JSON
+    const headers = request.request.headers || [];
+    for (const h of headers) {
+      if (h.name.toLowerCase() === 'accept') {
+        if (h.value.toLowerCase().includes('json')) {
+          return true;
+        }
+      }
+    }
+    
+    // Default: skip (anggap bukan API)
+    return false;
   }
 
   // Mode 'custom' → terapkan checkbox
