@@ -1,6 +1,10 @@
 // ── panel.js ── Entry point
-import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
-         setLogs, setSelectedId, setEditingId, setSendingId,
+import { logs, selectedId, 
+          // editingId, 
+          sendingId, activeTab, activeSubTab,
+         setLogs, setSelectedId,
+          // setEditingId, 
+          setSendingId,
          setActiveTab, setActiveSubTab, ignoreStorageChange, setIgnoreStorageChange,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
          filterStatus, 
@@ -49,7 +53,7 @@ document.getElementById('clear').onclick = async () => {
   if (!confirmed) return;
   setLogs([]);
   setSelectedId(null);
-  setEditingId(null);
+  // setEditingId(null);
   setSendingId(null);
   await saveLogs();
   renderList();

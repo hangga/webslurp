@@ -1,5 +1,5 @@
-import { logs, selectedId, editingId, sendingId, activeTab, activeSubTab,
-         setSelectedId, setEditingId, setActiveTab, setActiveSubTab,
+import { logs, selectedId,sendingId, activeTab, activeSubTab,
+         setSelectedId, setActiveTab, setActiveSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
          MAX_LOGS } from './state.js';

@@ -1,7 +1,7 @@
 // ── STATE ──
 export let logs = [];
 export let selectedId = null;
-export let editingId = null;
+// export let editingId = null;
 export let sendingId = null;
 export let activeTab = 'request';
 export let activeSubTab = 'params';
@@ -15,7 +15,7 @@ export function setLogs(newLogs) {
   logs.push(...newLogs);
 }
 export function setSelectedId(id) { selectedId = id; }
-export function setEditingId(id) { editingId = id; }
+// export function setEditingId(id) { editingId = id; }
 export function setSendingId(id) { sendingId = id; }
 export function setActiveTab(tab) { activeTab = tab; }
 export function setActiveSubTab(sub) { activeSubTab = sub; }
