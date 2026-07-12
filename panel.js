@@ -132,7 +132,15 @@ async function initCaptureFilter() {
   document.getElementById('filter-skip-media').checked = c.skipMedia;
   document.getElementById('filter-skip-websocket').checked = c.skipWebSocket;
 
+  updateCaptureIcons(captureFilter.mode);
+
   toggleCustomFilters(captureFilter.mode === 'custom');
+}
+
+function updateCaptureIcons(mode) {
+  ['api', 'all', 'custom'].forEach(id => {
+    document.getElementById(`img-${id}`).hidden = id !== mode;
+  });
 }
 
 function toggleCustomFilters(show) {
@@ -142,6 +150,7 @@ function toggleCustomFilters(show) {
 // Event listeners
 document.getElementById('capture-mode').addEventListener('change', (e) => {
   captureFilter.mode = e.target.value;
+  updateCaptureIcons(captureFilter.mode);
   toggleCustomFilters(e.target.value === 'custom');
   saveCaptureFilter(captureFilter);
 });

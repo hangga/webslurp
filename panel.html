@@ -13,11 +13,11 @@
     <button id="reload-btn" class="toolbtn" title="Reload" style="padding:4px;">
       <img src="icons/reload.png" class="btn-icon" title="Reload"/>
     </button>
-
     
     <div class="theme-picker">
-      <img src="icons/filter.png" class="theme-icon" title="Filter"
-          style="width:26px;height:26px;padding-top:4px;"/>
+      <img id="img-api" hidden src="icons/api.png" class="filter-icon" title="Filter" />
+      <img id="img-all" hidden src="icons/all.png" class="filter-icon" title="Filter" />
+      <img id="img-custom" hidden src="icons/filter.png" class="filter-icon" title="Filter" />
       <select id="capture-mode">
         <option value="api">API Only</option>
         <option value="all">All Traffic</option>
