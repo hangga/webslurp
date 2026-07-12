@@ -1483,6 +1483,15 @@ body {
   flex: 1 1 150px;
   min-width: 100px;
 }
+
+.filter-icon{
+  filter: invert(1);
+  fill: var(--bg-primary);
+  width:24px;
+  height:24px;
+  padding:6px 2px 0 2px;
+}
+
 #count-badge {
   background: var(--bg-input);
   color: var(--text-primary);
@@ -1533,7 +1542,7 @@ body {
 #files{
   display: flex;
   align-items: center;
-  padding: 4px 6px 4px 6px;
+  padding: 4px 4px 4px 4px;
   border-bottom: 1px solid var(--border-color);
   gap: 4px;
   flex-shrink: 0;
