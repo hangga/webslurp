@@ -11,7 +11,8 @@
 
     <!-- Traffic -->
     <button id="reload-btn" class="toolbtn" title="Reload" style="padding:4px;">
-      <img src="icons/reload.png" class="btn-icon" title="Reload"/>
+      <img src="icons/reload.png" class="btn-icon" id="btn-icon" title="Reload"/>
+      <span id="btn-spinner" class="spinner" hidden></span>
     </button>
     
     <div class="theme-picker">
@@ -132,6 +133,9 @@
     <span id="status-text">Listening…</span>
     <span id="response-search-count"></span>
     <span id="status-count">0 requests</span>
+    <div id="progress-container" hidden>
+      <div id="progress-bar" style="width:0%;"></div>
+    </div>
   </footer>
 
   <!-- Modal Konfirmasi Kustom -->

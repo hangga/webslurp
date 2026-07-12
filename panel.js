@@ -12,10 +12,18 @@ import { logs, selectedId,
          divider, MAX_LOGS, loadTimeoutSetting} from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
-import { renderList, renderDetail } from './modules/render.js';
+import { renderList, renderDetail, setLoading } from './modules/render.js';
 import { startCapture } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
 import { theme, setTheme, captureFilter } from './modules/state.js';
+
+const reloadBtn = document.getElementById('reload-btn');
+const btnIcon = document.getElementById('btn-icon'); // atau img
+// const btnSpinner = document.getElementById('btn-spinner');
+
+const progressContainer = document.getElementById('progress-container');
+const progressBar = document.getElementById('progress-bar');
+
 
 // ── Resize divider ──
 let isDragging = false;
@@ -112,6 +120,7 @@ themeSelect.addEventListener('change', async (e) => {
 });
 
 async function initCaptureFilter() {
+  // setLoading(false);
   const stored = await loadCaptureFilter();
   if (stored) {
     captureFilter.mode = stored.mode;
@@ -174,10 +183,56 @@ document.querySelectorAll('#custom-filters input[type="checkbox"]').forEach(cb =
   });
 });
 
-document.getElementById('reload-btn').addEventListener('click', () => {
+// function setLoading(isLoading) {
+//   progressContainer.hidden = !isLoading;
+//   progressBar.classList.toggle('indeterminate', isLoading);
+
+//   if (!isLoading) {
+//     progressBar.style.width = '0%';
+//   }
+// }
+
+// function setLoading(isLoading) {
+//   const container = document.getElementById('progress-container');
+//   const bar = document.getElementById('progress-bar');
+
+//   if (isLoading) {
+//     container.hidden = false;
+//     bar.classList.add('indeterminate');
+//   } else {
+//     container.hidden = true;
+//     bar.classList.remove('indeterminate');
+//     bar.style.width = '0%'; // reset
+//   }
+// }
+
+reloadBtn.addEventListener('click', () => {
+  // Contoh untuk lingkungan DevTools
+  if (chrome.devtools && chrome.devtools.inspectedWindow) {
     chrome.devtools.inspectedWindow.reload({
         ignoreCache: true
     });
+  } else {
+    // Jika di popup atau content script, reload tab aktif
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        chrome.tabs.reload(tabs[0].id);
+      }
+    });
+  }
+});
+
+const tabId = chrome.devtools.inspectedWindow.tabId; // tersedia di DevTools
+
+// Pantau perubahan status tab
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tabId === chrome.devtools.inspectedWindow.tabId) {
+    if (changeInfo.status === 'loading') {
+      setLoading(true);
+    } else if (changeInfo.status === 'complete') {
+      setLoading(false);
+    }
+  }
 });
 
 function customConfirm(message) {

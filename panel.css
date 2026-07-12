@@ -1286,7 +1286,7 @@ body {
   font-size: 12px;
   cursor: pointer;
   height: 24px;
-  transition: background 0.15s, opacity 0.15s;
+  /* transition: background 0.15s, opacity 0.15s; */
   background: var(--bg-input);
   color: var(--text-primary);
   width: 40px;
@@ -2188,10 +2188,12 @@ body {
 }
 .spinner {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255,255,255,0.2);
-  border-top: 2px solid var(--send-sending-text);
+  margin-left: 0;
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-top: 1px solid var(--send-sending-text);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -2671,4 +2673,84 @@ body {
   #timeout-input {
     width: 100%;
   }
+}
+
+/* Spinner */
+.spinner {
+  /* display: inline-block; */
+  visibility: hidden;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Progress bar */
+/* Container - pastikan ada background gelap/abu agar progress bar terlihat */
+#progress-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 26px;
+  /* background: var(--bg-rbody) !important;  abu terang sebagai latar */
+  /* border-radius: 6px; */
+  overflow: hidden;
+  backdrop-filter: blur(2px);  
+  /* efek kaca, opsional */
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  /* margin: 6px 0; */
+}
+
+/* Progress bar dengan warna solid mencolok */
+#progress-bar {
+  height: 100%;
+  width: 0%;
+  /* background: #2563eb !important;   biru terang */
+  /* background: rgba(37, 99, 235, 0.7) !important; */
+    /* biru dengan alpha 0.7 */
+  /* border-radius: 6px; */
+  transition: width 0.1s ease;
+  position: relative;
+}
+
+/* Saat indeterminate, kita gunakan efek shimmer di ataswarna solid */
+#progress-bar.indeterminate {
+  width: 100% !important;
+  background: var(--accent-color) !important;   /* biru solid */
+  transition: none;
+}
+
+/* Tambahkan pseudo-element untuk shimmer */
+#progress-bar.indeterminate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 40%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.6) 60%,
+    transparent 100%
+  );
+  animation: shimmer 1.8s infinite;
+  border-radius: 6px;
+  opacity: 5;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }

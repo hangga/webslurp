@@ -10,8 +10,11 @@ import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
 import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
 
+const container = document.getElementById('progress-container');
+const bar = document.getElementById('progress-bar');
+
 // ── Render list (grouped by hostname) ──
-export function renderList() {
+export function renderList(callback) {
   const filtered = filterLogs();
   countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
@@ -94,6 +97,10 @@ export function renderList() {
     logListContainer.appendChild(groupDiv);
   });
 
+  if (callback) callback();
+
+  // console.log('CEK-calback =========>', callback? "Ada":"tak")
+
   if (logs.length === 0) {
     statusText.textContent = 'Listening…';
   } else {
@@ -117,6 +124,18 @@ export function selectLog(idx) {
   // setActiveSubTab('params');
   renderList();
   renderDetail(idx);
+}
+
+export function setLoading(isLoading) {
+
+  if (isLoading) {
+    container.hidden = false;
+    bar.classList.add('indeterminate');
+  } else {
+    container.hidden = true;
+    bar.classList.remove('indeterminate');
+    bar.style.width = '0%'; // reset
+  }
 }
 
 // ── renderDetail (selalu dalam mode edit untuk request) ──
@@ -362,7 +381,7 @@ export function renderDetail(idx) {
   if (noteTextarea) noteTextarea.addEventListener('input', () => {
     logs[idx].note = noteTextarea.value;
     saveLogs();
-    renderList();
+    // renderList();
   });
 
   // Selalu pasang event untuk subtab (update log saat input berubah)
