@@ -1494,7 +1494,10 @@ body {
   gap: 2px;
   flex-shrink: 0;
   flex-wrap: wrap;
-  visibility: hidden;
+  /* visibility: hidden; */
+}
+#sticky-search[hidden] {
+  display: none;
 }
 #sticky-search .search-icon {
   color: var(--text-secondary);
@@ -2228,6 +2231,10 @@ body {
 }
 .body-textarea-row textarea:focus {
   border-color: var(--accent);
+}
+
+#edit-body {
+  height: 280px;
 }
 
 /* ── DETAIL ACTIONS ── */

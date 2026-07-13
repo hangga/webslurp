@@ -4,7 +4,8 @@ import { logs, selectedId,sendingId, activeTab, activeSubTab,
          expandedGroups, toggleGroup,
          MAX_LOGS, timeoutMs } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
-        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon, getBaseDomain } from './helpers.js';
+        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
+        getBaseDomain, autoResizeTextarea } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -439,7 +440,7 @@ export function renderDetail(idx) {
     html += `</div></div></div>`;
 
     const highlightedBody = highlightText(formattedText, '');
-
+    
     html += `<div class="response-body">
     <label>Response Body</label>
       <div class="rb-content" id="response-body-content">${highlightedBody}</div>
@@ -508,7 +509,8 @@ export function renderDetail(idx) {
   //   }
   // }
 
-  stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
+  // stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
+  stickySearch.hidden = activeTab !== 'response';
 
   // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {

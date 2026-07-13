@@ -270,6 +270,11 @@ export function getBaseDomain(hostname) {
   return parts.slice(-2).join('.');
 }
 
+export function autoResizeTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
 export function detectCategory({
     url = '',
     method = '',
