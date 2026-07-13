@@ -427,8 +427,7 @@ export function renderDetail(idx) {
     // ── Response Headers (expandable) ──
     html += `<div class="response-headers">
       <label style="display:flex; cursor: pointer;" id="headers-toggle">
-        <span>Response Headers</span>
-        <span id="headers-toggle-icon">▶</span>
+        <span>Response Headers</span>        
       </label>
       <div class="rheaders-container" id="rheaders-container" >
         <div class="rh-inner">`;
