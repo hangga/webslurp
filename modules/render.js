@@ -12,6 +12,7 @@ import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
 
 const container = document.getElementById('progress-container');
 const bar = document.getElementById('progress-bar');
+const stickySearch = document.getElementById('sticky-search');
 // const expandedGroups = new Set();      // untuk domain utama (base domain)
 const expandedSubGroups = new Set();   // untuk subdomain (hostname lengkap), simpan sebaga
 
@@ -498,10 +499,13 @@ export function renderDetail(idx) {
     }
   }
 
+  stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
+
   // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
     const tabName = this.dataset.tab;
     if (tabName && tabName !== activeTab) { setActiveTab(tabName); renderDetail(idx); }
+    stickySearch.style.visibility = activeTab === 'response'? 'visible':'hidden'
   }));
   detailContent.querySelectorAll('.sub-tab').forEach(tab => tab.addEventListener('click', function(e) {
     const subTab = this.dataset.subtab;
@@ -638,6 +642,20 @@ export function renderDetail(idx) {
         updateHighlight(e.target.value);
       }, 250)
     );
+
+    searchInputResp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        gotoMatch(currentMatchIndex + 1);
+      }
+    });
+    
+    searchInputResp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+
+      e.preventDefault();
+      gotoMatch(currentMatchIndex + (e.shiftKey ? -1 : 1));
+    });
   }
 
   // ------------------------------------------------------------

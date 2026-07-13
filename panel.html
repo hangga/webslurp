@@ -33,15 +33,7 @@
         placeholder="Search/ filter requests..."
         spellcheck="false"/>
 
-    <!-- Response Search -->
-    <input
-        id="response-search"
-        type="text"
-        placeholder="Search response..."
-        spellcheck="false"/>
-
-    <button id="response-search-prev" class="search-nav">◀</button>
-    <button id="response-search-next" class="search-nav">▶</button>
+    
 
     
     <!-- Status -->
@@ -127,6 +119,18 @@
     <div id="detail-panel">
       <div id="detail-empty">Select a request to view details</div>
       <div id="detail-content"></div>
+      <div class="sticky-search" id="sticky-search">
+        <!-- search content -->
+         <!-- Response Search -->
+        <input
+            id="response-search"
+            type="text"
+            placeholder="Search response..."
+            spellcheck="false"/>
+
+        <button id="response-search-prev" class="search-nav">◀</button>
+        <button id="response-search-next" class="search-nav">▶</button>
+      </div>
     </div>
   </div>
 
