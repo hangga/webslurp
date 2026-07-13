@@ -16,7 +16,11 @@ export function attachSubtabEvents(idx) {
     document.querySelectorAll('.params-row:not(.header-row)').forEach(r => {
       const k = r.querySelector('.param-key').value.trim();
       const v = r.querySelector('.param-value').value;
-      if (k) params.push({ key: k, value: v });
+      if (k) { 
+        params.push({ key: k, value: v }); 
+        console.log('CEK-PARAM =========> key:', k);
+        console.log('CEK-PARAM =========> value', v);
+      }
     });
     log.queryParams = params;
     // const preview = document.getElementById('url-preview');

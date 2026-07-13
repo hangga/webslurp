@@ -10,7 +10,7 @@ export async function saveLogs() {
     // await chrome.storage.local.set({ logs });
     const data = JSON.stringify(logs);
     await chrome.storage.local.set({ [STORAGE_KEY]: data });
-  } catch{
+  } catch (e){
     console.warn('[BrutuSuite] Gagal menyimpan logs:', e);
   } finally {
     setIgnoreStorageChange(false);
