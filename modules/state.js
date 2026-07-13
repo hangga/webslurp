@@ -1,9 +1,8 @@
 // ── STATE ──
 export let logs = [];
 export let selectedId = null;
-// export let editingId = null;
 export let sendingId = null;
-export let activeTab = 'request';
+export let activeTab = 'response'; //'request';
 export let activeSubTab = 'params';
 export const MAX_LOGS = 200;
 export let ignoreStorageChange = false;
@@ -38,16 +37,43 @@ export const divider = document.getElementById('divider');
 // ── State untuk group expand ──
 export let expandedGroups = new Set();
 
-export function toggleGroup(hostname) {
-  if (expandedGroups.has(hostname)) {
-    expandedGroups.delete(hostname);
-  } else {
-    expandedGroups.add(hostname);
-  }
-}
+// export function toggleGroup(hostname) {
+//   if (expandedGroups.has(hostname)) {
+//     expandedGroups.delete(hostname);
+//   } else {
+//     expandedGroups.add(hostname);
+//   }
+// }
 
 export function isGroupExpanded(hostname) {
   return expandedGroups.has(hostname);
+}
+
+// tambahan subgrgroup
+// Untuk sub group (hostname lengkap)
+export function toggleSubGroup(domain, hostname) {
+  const key = `${domain}|${hostname}`;
+  if (expandedSubGroups.has(key)) {
+    expandedSubGroups.delete(key);
+  } else {
+    expandedSubGroups.add(key);
+  }
+  // Setelah toggle, panggil renderList() untuk memperbarui UI
+  renderList();
+}
+
+// Atau jika Anda ingin fungsi umum yang menerima level
+export function toggleGroup(level, key) {
+  if (level === 'domain') {
+    // toggle domain utama
+    if (expandedGroups.has(key)) expandedGroups.delete(key);
+    else expandedGroups.add(key);
+  } else if (level === 'sub') {
+    // toggle subdomain
+    if (expandedSubGroups.has(key)) expandedSubGroups.delete(key);
+    else expandedSubGroups.add(key);
+  }
+  renderList();
 }
 
 // ── State untuk tema ──

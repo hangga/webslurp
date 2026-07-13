@@ -1647,7 +1647,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 600;
+  font-weight: 200;
   color: var(--text-primary);
 }
 .group-count {
@@ -1675,6 +1675,7 @@ body {
 
 /* ── LOG ENTRY ── */
 .log-entry {
+  margin-left: 10px;
   background: var(--bg-log-entry);
   border-radius: 4px;
   margin-bottom: 1px;
@@ -1694,7 +1695,7 @@ body {
   border-left-color: var(--accent);
 }
 .log-entry .status {
-  font-weight: 600;
+  font-weight: 200;
   min-width: 38px;
   padding: 1px 6px;
   border-radius: 12px;
@@ -2753,4 +2754,15 @@ body {
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+.sub-header {
+  padding-left: 6px;
+}
+.sub-group-body {
+  padding-left: 18px;
+}
+
+.sub-group-body.collapsed {
+  display: none;
 }

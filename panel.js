@@ -1,10 +1,6 @@
 // ── panel.js ── Entry point
-import { logs, selectedId, 
-          // editingId, 
-          sendingId, activeTab, activeSubTab,
-         setLogs, setSelectedId,
-          // setEditingId, 
-          setSendingId,
+import { logs, selectedId, sendingId, activeTab, activeSubTab,
+         setLogs, setSelectedId, setSendingId,
          setActiveTab, setActiveSubTab, ignoreStorageChange, setIgnoreStorageChange,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
          filterStatus, 
@@ -67,7 +63,6 @@ document.getElementById('clear').onclick = async () => {
   if (!confirmed) return;
   setLogs([]);
   setSelectedId(null);
-  // setEditingId(null);
   setSendingId(null);
   await saveLogs();
   renderList();
@@ -183,29 +178,6 @@ document.querySelectorAll('#custom-filters input[type="checkbox"]').forEach(cb =
   });
 });
 
-// function setLoading(isLoading) {
-//   progressContainer.hidden = !isLoading;
-//   progressBar.classList.toggle('indeterminate', isLoading);
-
-//   if (!isLoading) {
-//     progressBar.style.width = '0%';
-//   }
-// }
-
-// function setLoading(isLoading) {
-//   const container = document.getElementById('progress-container');
-//   const bar = document.getElementById('progress-bar');
-
-//   if (isLoading) {
-//     container.hidden = false;
-//     bar.classList.add('indeterminate');
-//   } else {
-//     container.hidden = true;
-//     bar.classList.remove('indeterminate');
-//     bar.style.width = '0%'; // reset
-//   }
-// }
-
 reloadBtn.addEventListener('click', () => {
   // Contoh untuk lingkungan DevTools
   if (chrome.devtools && chrome.devtools.inspectedWindow) {
@@ -273,10 +245,10 @@ function customConfirm(message) {
   });
 }
 
-// Ekspor
+// Export
 document.getElementById('export-btn')?.addEventListener('click', exportLogsToFile);
 
-// Impor
+// Import
 document.getElementById('import-btn')?.addEventListener('click', () => {
   const input = document.createElement('input');
   input.type = 'file';
