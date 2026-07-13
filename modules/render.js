@@ -4,7 +4,8 @@ import { logs, selectedId,sendingId, activeTab, activeSubTab,
          expandedGroups, toggleGroup,
          MAX_LOGS, timeoutMs } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
-        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon, getBaseDomain } from './helpers.js';
+        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
+        getBaseDomain, autoResizeTextarea } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -439,7 +440,7 @@ export function renderDetail(idx) {
     html += `</div></div></div>`;
 
     const highlightedBody = highlightText(formattedText, '');
-
+    
     html += `<div class="response-body">
     <label>Response Body</label>
       <div class="rb-content" id="response-body-content">${highlightedBody}</div>
@@ -454,61 +455,8 @@ export function renderDetail(idx) {
 
   detailContent.innerHTML = html;
 
-  // // ── Response headers expandable toggle ──
-  // const headersToggle = document.getElementById('headers-toggle');
-  // const headersContainer = document.getElementById('rheaders-container');
-  // const toggleIcon = document.getElementById('headers-toggle-icon');
-  // let headersExpanded = (formattedText === '');
-
-  // // console.log('CEK-headersExpanded ======>', headersExpanded);
-
-  // if (headersToggle && headersContainer) {
-  //   // Hitung jumlah header
-  //   const headerRows = headersContainer.querySelectorAll('.rh-row');
-  //   const inner = headersContainer.querySelector('.rh-inner');
-  //   const innerNow = headersContainer.querySelector('.rh-inner');
-  //   const heightNow = innerNow ? innerNow.scrollHeight : 0;
-
-  //   if (headersExpanded) {
-  //         headersContainer.style.maxHeight = heightNow + 'px';
-  //         toggleIcon.textContent = '▼';
-  //       } else {
-  //         headersContainer.style.maxHeight = '0';
-  //         toggleIcon.textContent = '▶';
-  //       }
-
-  //   // Jika tidak ada header, sembunyikan toggle dan label
-  //   if (headerRows.length === 0) {
-  //     headersToggle.style.display = 'none';
-  //     headersContainer.style.display = 'none';
-  //   } else {
-  //     // Default: collapsed jika > 5, expanded jika <= 5
-  //     if (headerRows.length > 5) {
-  //       headersExpanded = false;
-  //       headersContainer.style.maxHeight = '0';
-  //       toggleIcon.textContent = '▶';
-  //     } else {
-  //       headersExpanded = true;
-  //       // Set max-height sesuai konten
-  //       const height = inner ? inner.scrollHeight : 0;
-  //       headersContainer.style.maxHeight = height + 'px';
-  //       toggleIcon.textContent = '▼';
-  //     }
-
-  //     headersToggle.addEventListener('click', () => {
-  //       headersExpanded = !headersExpanded;
-  //       if (headersExpanded) {
-  //         headersContainer.style.maxHeight = heightNow + 'px';
-  //         toggleIcon.textContent = '▼';
-  //       } else {
-  //         headersContainer.style.maxHeight = '0';
-  //         toggleIcon.textContent = '▶';
-  //       }
-  //     });
-  //   }
-  // }
-
-  stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
+  // stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
+  stickySearch.hidden = activeTab !== 'response';
 
   // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
