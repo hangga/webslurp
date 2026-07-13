@@ -13,22 +13,41 @@ export function attachSubtabEvents(idx) {
   const paramAdd = document.querySelector('.param-add');
   const updateParams = () => {
     const params = [];
-    document.querySelectorAll('.params-row:not(.header-row)').forEach(r => {
-      const k = r.querySelector('.param-key').value.trim();
-      const v = r.querySelector('.param-value').value;
-      if (k) { 
-        params.push({ key: k, value: v }); 
-        console.log('CEK-PARAM =========> key:', k);
-        console.log('CEK-PARAM =========> value', v);
-      }
-    });
+
+    document
+      .querySelectorAll('.params-row:not(.header-row)')
+      .forEach((r) => {
+        const key = r.querySelector('.param-key').value.trim();
+        const value = r.querySelector('.param-value').value;
+
+        if (key) {
+          params.push({ key, value });
+        }
+      });
+
     log.queryParams = params;
-    // const preview = document.getElementById('url-preview');
-    // if (preview) preview.textContent = buildUrlWithParams(log);
+
     const urlInput = document.getElementById('edit-url');
-    if (urlInput) { const newUrl = buildUrlWithParams(log); log.url = newUrl; urlInput.value = newUrl; }
+
+    if (urlInput) {
+      // Hapus query string lama
+      const baseUrl = urlInput.value.split('?')[0];
+
+      // Buat query string baru dari params
+      const query = new URLSearchParams(
+        params.map(({ key, value }) => [key, value])
+      ).toString();
+
+      // Gabungkan kembali
+      const newUrl = query ? `${baseUrl}?${query}` : baseUrl;
+
+      log.url = newUrl;
+      urlInput.value = newUrl;
+    }
+
     saveLogs();
   };
+
   paramRows.forEach(row => {
     row.querySelector('.param-key').addEventListener('input', updateParams);
     row.querySelector('.param-value').addEventListener('input', updateParams);
@@ -263,7 +282,18 @@ export function attachSubtabEvents(idx) {
   const methodSelect = document.getElementById('edit-method');
   const urlInput = document.getElementById('edit-url');
   if (methodSelect) methodSelect.addEventListener('change', () => { log.method = methodSelect.value; saveLogs(); });
-  if (urlInput) urlInput.addEventListener('input', () => { log.url = urlInput.value; saveLogs(); const preview = document.getElementById('url-preview'); if (preview) preview.textContent = buildUrlWithParams(log); });
+  if (urlInput) {
+    urlInput.addEventListener('input', () => {
+      log.url = urlInput.value;
+      saveLogs();
+
+      // const preview = document.getElementById('url-preview');
+
+      // if (preview) {
+      //   preview.textContent = buildUrlWithParams(log);
+      // }
+    });
+  }
 }
 
 // ── updateHeadersFromUI ──
