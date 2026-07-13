@@ -1575,7 +1575,7 @@ body {
   /* padding: 6px 12px; */
   padding: 8px 8px 8px 12px;
   /* background: var(--bg-search); */
-  border-bottom: 1px solid var(--divider-color);
+  border-bottom: 1px solid var(--border-color);
   gap: 8px;
   flex-shrink: 0;
 }
@@ -1588,6 +1588,34 @@ body {
   gap: 4px;
   flex-shrink: 0;
 }
+/* #files input,
+#files select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  height: 28px;
+}
+#files input:focus,
+#files select:focus {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+#files #search {
+  flex: 1;
+}
+#files #filter-content {
+  flex: 1 1 150px;
+  min-width: 100px;
+}
+#files select{
+  width: 90px;
+  font-size: 11px;
+} */
 
 /* ── SPLIT VIEW ── */
 #split-view {
@@ -1599,7 +1627,7 @@ body {
 
 /* ── LOG LIST ── */
 #log-list {
-  width: 30%;
+  width: 40%;
   /* overflow-y: auto; */
   /* padding: 8px 8px 8px 12px; */
   background: var(--bg-log-list);
@@ -1679,8 +1707,8 @@ body {
   display: flex;
 }
 
-.select{
-  width: 90px;
+/* .select{
+  width: 10px;
   flex: 1;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
@@ -1689,7 +1717,7 @@ body {
   color: var(--text-primary);
   font-size: 12px;
   outline: none;
-}
+} */
 
 /* ── GROUP HEADER ── */
 .log-group {

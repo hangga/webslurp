@@ -8,9 +8,8 @@
 </head>
 <body>
   <div id="search-bar">
-
     <!-- Traffic -->
-    <button id="reload-btn" class="toolbtn" title="Reload" style="padding:4px;">
+    <button id="reload-btn" class="btn" title="Reload" style="padding:4px;">
       <img src="icons/reload.png" class="btn-icon" id="btn-icon" title="Reload"/>
       <span id="btn-spinner" class="spinner" hidden></span>
     </button>
@@ -27,14 +26,43 @@
     </div>
 
     <!-- Request Filter -->
-    <input
-        id="search"
-        type="text"
-        placeholder="Search/ filter requests..."
-        spellcheck="false"/>
+          <input
+              id="search"
+              type="text"
+              placeholder="Search/ filter requests..."
+              spellcheck="false" width="400"/>
 
-    
+          <select id="filter-method" class="select">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PATCH">PATCH</option>
+            <option value="HEAD">HEAD</option>
+            <option value="OPTIONS">OPTIONS</option>
+          </select>
 
+          <select id="filter-status" class="select">
+            <option value="">All Status</option>
+            <option value="2xx">2xx Success</option>
+            <option value="3xx">3xx Redirect</option>
+            <option value="4xx">4xx Client Error</option>
+            <option value="5xx">5xx Server Error</option>
+          </select>
+
+    <!-- File -->
+    <button class="btn primary" id="import-btn" title="Open from file">
+      <img src="icons/open-folder.png" class="btn-icon" title="Open from file"/>
+    </button>
+
+    <button class="btn primary" id="export-btn" title="Save to file">
+      <img src="icons/save.png" class="btn-icon" title="Save to file"/>
+    </button>
+
+    <button id="clear" class="btn primary" title="Clear All" >
+      <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;"/>
+    </button>
     
     <!-- Status -->
     <span id="count-badge">0</span>
@@ -80,39 +108,9 @@
           <label><input type="checkbox" id="filter-skip-media" checked> Skip Media</label>
           <label><input type="checkbox" id="filter-skip-websocket" checked> Skip WebSocket</label>     
       </div>
-      <div id="files">
-          <!-- File -->
-          <button class="toolmenu" id="import-btn" title="Open from file">
-            <img src="icons/open-folder.png" class="btn-icon" title="Open from file"/>
-          </button>
-
-          <button class="toolmenu" id="export-btn" title="Save to file">
-            <img src="icons/save.png" class="btn-icon" title="Save to file"/>
-          </button>
-
-          <button id="clear" class="toolmenu" title="Clear All" >
-            <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;"/>
-          </button>
-
-          <select id="filter-method" class="select" style="margin-left: 24px;">
-            <option value="">All Methods</option>
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="DELETE">DELETE</option>
-            <option value="PATCH">PATCH</option>
-            <option value="HEAD">HEAD</option>
-            <option value="OPTIONS">OPTIONS</option>
-          </select>
-
-          <select id="filter-status" class="select">
-            <option value="">All Status</option>
-            <option value="2xx">2xx Success</option>
-            <option value="3xx">3xx Redirect</option>
-            <option value="4xx">4xx Client Error</option>
-            <option value="5xx">5xx Server Error</option>
-          </select>
-        </div>
+      <!-- <div id="files">
+          
+        </div> -->
       <div id="log-list-container"></div>
     </div>
     <div id="divider"></div>
