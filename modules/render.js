@@ -427,10 +427,9 @@ export function renderDetail(idx) {
     // ── Response Headers (expandable) ──
     html += `<div class="response-headers">
       <label style="display:flex; cursor: pointer;" id="headers-toggle">
-        <span>Response Headers</span>
-        <span id="headers-toggle-icon">▶</span>
+        <span>Response Headers</span>        
       </label>
-      <div class="rheaders-container" id="rheaders-container" style="max-height:0;overflow:hidden;transition:max-height 0.2s ease;">
+      <div class="rheaders-container" id="rheaders-container" >
         <div class="rh-inner">`;
     if (respHeaders.length) {
       respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
@@ -455,49 +454,59 @@ export function renderDetail(idx) {
 
   detailContent.innerHTML = html;
 
-  // ── Response headers expandable toggle ──
-  const headersToggle = document.getElementById('headers-toggle');
-  const headersContainer = document.getElementById('rheaders-container');
-  const toggleIcon = document.getElementById('headers-toggle-icon');
-  let headersExpanded = false;
+  // // ── Response headers expandable toggle ──
+  // const headersToggle = document.getElementById('headers-toggle');
+  // const headersContainer = document.getElementById('rheaders-container');
+  // const toggleIcon = document.getElementById('headers-toggle-icon');
+  // let headersExpanded = (formattedText === '');
 
-  if (headersToggle && headersContainer) {
-    // Hitung jumlah header
-    const headerRows = headersContainer.querySelectorAll('.rh-row');
-    const inner = headersContainer.querySelector('.rh-inner');
+  // // console.log('CEK-headersExpanded ======>', headersExpanded);
 
-    // Jika tidak ada header, sembunyikan toggle dan label
-    if (headerRows.length === 0) {
-      headersToggle.style.display = 'none';
-      headersContainer.style.display = 'none';
-    } else {
-      // Default: collapsed jika > 5, expanded jika <= 5
-      if (headerRows.length > 5) {
-        headersExpanded = false;
-        headersContainer.style.maxHeight = '0';
-        toggleIcon.textContent = '▶';
-      } else {
-        headersExpanded = true;
-        // Set max-height sesuai konten
-        const height = inner ? inner.scrollHeight : 0;
-        headersContainer.style.maxHeight = height + 'px';
-        toggleIcon.textContent = '▼';
-      }
+  // if (headersToggle && headersContainer) {
+  //   // Hitung jumlah header
+  //   const headerRows = headersContainer.querySelectorAll('.rh-row');
+  //   const inner = headersContainer.querySelector('.rh-inner');
+  //   const innerNow = headersContainer.querySelector('.rh-inner');
+  //   const heightNow = innerNow ? innerNow.scrollHeight : 0;
 
-      headersToggle.addEventListener('click', () => {
-        headersExpanded = !headersExpanded;
-        if (headersExpanded) {
-          const innerNow = headersContainer.querySelector('.rh-inner');
-          const heightNow = innerNow ? innerNow.scrollHeight : 0;
-          headersContainer.style.maxHeight = heightNow + 'px';
-          toggleIcon.textContent = '▼';
-        } else {
-          headersContainer.style.maxHeight = '0';
-          toggleIcon.textContent = '▶';
-        }
-      });
-    }
-  }
+  //   if (headersExpanded) {
+  //         headersContainer.style.maxHeight = heightNow + 'px';
+  //         toggleIcon.textContent = '▼';
+  //       } else {
+  //         headersContainer.style.maxHeight = '0';
+  //         toggleIcon.textContent = '▶';
+  //       }
+
+  //   // Jika tidak ada header, sembunyikan toggle dan label
+  //   if (headerRows.length === 0) {
+  //     headersToggle.style.display = 'none';
+  //     headersContainer.style.display = 'none';
+  //   } else {
+  //     // Default: collapsed jika > 5, expanded jika <= 5
+  //     if (headerRows.length > 5) {
+  //       headersExpanded = false;
+  //       headersContainer.style.maxHeight = '0';
+  //       toggleIcon.textContent = '▶';
+  //     } else {
+  //       headersExpanded = true;
+  //       // Set max-height sesuai konten
+  //       const height = inner ? inner.scrollHeight : 0;
+  //       headersContainer.style.maxHeight = height + 'px';
+  //       toggleIcon.textContent = '▼';
+  //     }
+
+  //     headersToggle.addEventListener('click', () => {
+  //       headersExpanded = !headersExpanded;
+  //       if (headersExpanded) {
+  //         headersContainer.style.maxHeight = heightNow + 'px';
+  //         toggleIcon.textContent = '▼';
+  //       } else {
+  //         headersContainer.style.maxHeight = '0';
+  //         toggleIcon.textContent = '▶';
+  //       }
+  //     });
+  //   }
+  // }
 
   stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
 
