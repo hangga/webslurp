@@ -1673,6 +1673,16 @@ body {
   display: none;
 }
 
+.sub-group-body {
+  margin-left: 16px;
+  border-left: 1px solid var(--border-light);
+  padding-left: 8px;
+  overflow: hidden;
+}
+.sub-group-body.collapsed {
+  display: none;
+}
+
 /* ── LOG ENTRY ── */
 .log-entry {
   margin-left: 10px;
