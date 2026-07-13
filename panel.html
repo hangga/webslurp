@@ -11,7 +11,8 @@
 
     <!-- Traffic -->
     <button id="reload-btn" class="toolbtn" title="Reload" style="padding:4px;">
-      <img src="icons/reload.png" class="btn-icon" title="Reload"/>
+      <img src="icons/reload.png" class="btn-icon" id="btn-icon" title="Reload"/>
+      <span id="btn-spinner" class="spinner" hidden></span>
     </button>
     
     <div class="theme-picker">
@@ -89,15 +90,16 @@
       </div>
       <div id="files">
           <!-- File -->
-          <button id="clear" class="toolmenu" title="Clear All" >
-            <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;"/>
-          </button>
           <button class="toolmenu" id="import-btn" title="Open from file">
             <img src="icons/open-folder.png" class="btn-icon" title="Open from file"/>
           </button>
 
           <button class="toolmenu" id="export-btn" title="Save to file">
             <img src="icons/save.png" class="btn-icon" title="Save to file"/>
+          </button>
+
+          <button id="clear" class="toolmenu" title="Clear All" >
+            <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;"/>
           </button>
 
           <select id="filter-method" class="select" style="margin-left: 24px;">
@@ -132,6 +134,9 @@
     <span id="status-text">Listening…</span>
     <span id="response-search-count"></span>
     <span id="status-count">0 requests</span>
+    <div id="progress-container" hidden>
+      <div id="progress-bar" style="width:0%;"></div>
+    </div>
   </footer>
 
   <!-- Modal Konfirmasi Kustom -->

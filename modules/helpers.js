@@ -191,10 +191,10 @@ export function highlightText(text, keyword) {
 export function getCategoryIcon(category) {
   switch (category) {
     case 'html':
-      return '<>';
+      return '📄';
 
     case 'css':
-      return '#';
+      return '🎨';
 
     case 'js':
       return 'JS';
@@ -215,10 +215,10 @@ export function getCategoryIcon(category) {
       return '⇪';
 
     case 'image':
-      return '▣';
+      return '🏞️';
 
     case 'video':
-      return '▶';
+      return '🎬';
 
     case 'audio':
       return '♫';
@@ -247,6 +247,27 @@ export function getCategoryIcon(category) {
     default:
       return '•';
   }
+}
+
+export function getBaseDomain(hostname) {
+  // Hapus 'www.' di awal
+  hostname = hostname.replace(/^www\./, '');
+  const parts = hostname.split('.');
+  if (parts.length <= 2) return hostname;
+
+  // Daftar TLD dua tingkat yang umum (bisa ditambah sesuai kebutuhan)
+  const twoLevelTlds = new Set([
+    'co.uk', 'com.au', 'co.id', 'ac.id', 'or.id',
+    'co.jp', 'ne.jp', 'com.sg', 'org.sg', 'com.my'
+  ]);
+  // Cek apakah dua bagian terakhir membentuk TLD dua tingkat
+  const lastTwo = parts.slice(-2).join('.');
+  if (twoLevelTlds.has(lastTwo)) {
+    // Ambil tiga bagian terakhir
+    return parts.slice(-3).join('.');
+  }
+  // Default: ambil dua bagian terakhir
+  return parts.slice(-2).join('.');
 }
 
 export function detectCategory({

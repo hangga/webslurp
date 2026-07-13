@@ -4,20 +4,25 @@ import { logs, selectedId,sendingId, activeTab, activeSubTab,
          expandedGroups, toggleGroup,
          MAX_LOGS, timeoutMs } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
-        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon } from './helpers.js';
+        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon, getBaseDomain } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
 import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
 
+const container = document.getElementById('progress-container');
+const bar = document.getElementById('progress-bar');
+// const expandedGroups = new Set();      // untuk domain utama (base domain)
+const expandedSubGroups = new Set();   // untuk subdomain (hostname lengkap), simpan sebaga
+
 // ── Render list (grouped by hostname) ──
-export function renderList() {
+export function renderList(callback) {
   const filtered = filterLogs();
   countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
 
-  // Group by hostname
-  const groups = {};
+  // ---- 1. Kelompokkan berdasarkan domain utama ----
+  const domainGroups = {};
   filtered.forEach(log => {
     let hostname = '';
     try {
@@ -25,81 +30,242 @@ export function renderList() {
     } catch {
       hostname = 'invalid';
     }
-    if (!groups[hostname]) groups[hostname] = [];
-    groups[hostname].push(log);
+    const domain = getBaseDomain(hostname);
+    if (!domainGroups[domain]) domainGroups[domain] = [];
+    domainGroups[domain].push(log);
   });
 
-  const sortedHostnames = Object.keys(groups).sort();
-
+  const sortedDomains = Object.keys(domainGroups).sort();
   logListContainer.innerHTML = '';
-  sortedHostnames.forEach(hostname => {
-    const groupLogs = groups[hostname];
-    const groupDiv = document.createElement('div');
-    groupDiv.className = 'log-group';
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'group-header';
-    header.innerHTML = `
+  sortedDomains.forEach(domain => {
+    const domainLogs = domainGroups[domain];
+    const domainDiv = document.createElement('div');
+    domainDiv.className = 'log-group';
+
+    // ---- Header domain utama ----
+    const domainHeader = document.createElement('div');
+    domainHeader.className = 'group-header';
+    domainHeader.innerHTML = `
       <span class="group-toggle">+ </span>
-      <span class="group-name">🗂️ ${escapeHtml(hostname)}</span>
-      <span class="group-count">(${groupLogs.length})</span>
+      <span class="group-name">🗂️ ${escapeHtml(domain)}</span>
+      <span class="group-count">(${domainLogs.length})</span>
     `;
-    header.addEventListener('click', () => {
-      const body = groupDiv.querySelector('.group-body');
-      const toggle = header.querySelector('.group-toggle');
+    domainHeader.addEventListener('click', () => {
+      const body = domainDiv.querySelector('.group-body');
+      const toggle = domainHeader.querySelector('.group-toggle');
       const isExpanded = !body.classList.contains('collapsed');
       if (isExpanded) {
         body.classList.add('collapsed');
         toggle.textContent = '+  ';
-        expandedGroups.delete(hostname);
+        expandedGroups.delete(domain);
       } else {
         body.classList.remove('collapsed');
         toggle.textContent = '-  ';
-        expandedGroups.add(hostname);
+        expandedGroups.add(domain);
       }
     });
-    groupDiv.appendChild(header);
+    domainDiv.appendChild(domainHeader);
 
-    // Body
-    const body = document.createElement('div');
-    body.className = 'group-body';
-    if (expandedGroups.has(hostname)) {
-      body.classList.remove('collapsed');
-      header.querySelector('.group-toggle').textContent = '- ';
+    // ---- Body domain utama ----
+    const domainBody = document.createElement('div');
+    domainBody.className = 'group-body';
+    if (expandedGroups.has(domain)) {
+      domainBody.classList.remove('collapsed');
+      domainHeader.querySelector('.group-toggle').textContent = '- ';
     } else {
-      body.classList.add('collapsed');
-      header.querySelector('.group-toggle').textContent = '+ ';
+      domainBody.classList.add('collapsed');
+      domainHeader.querySelector('.group-toggle').textContent = '+ ';
     }
-    
-    groupLogs.forEach(log => {
-      const realIdx = logs.indexOf(log);
-      const entry = document.createElement('div');
-      const sc = statusClass(log.status);
-      entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
-      if (log.note) entry.classList.add('has-note');
-      const icon = getCategoryIcon(log.category);
-      entry.innerHTML = `
-        <span class="req-icon">${icon}</span>
-        <span class="status ${sc}">${log.status}</span>
-        <span class="method">${log.method || 'GET'}</span>
-        <span class="url">${escapeHtml(log.url)}</span>
-        ${log.note ? `<span class="note-icon">📝</span>` : ''}
-        <span class="time">${log.time || ''}</span>
-      `;
-      entry.addEventListener('click', () => selectLog(realIdx));
-      body.appendChild(entry);
+
+    // ---- 2. Di dalam domain, kelompokkan berdasarkan hostname lengkap ----
+    const hostGroups = {};
+    domainLogs.forEach(log => {
+      let hostname = '';
+      try {
+        hostname = new URL(log.url).hostname;
+      } catch {
+        hostname = 'invalid';
+      }
+      if (!hostGroups[hostname]) hostGroups[hostname] = [];
+      hostGroups[hostname].push(log);
     });
-    groupDiv.appendChild(body);
-    logListContainer.appendChild(groupDiv);
+
+    const sortedHosts = Object.keys(hostGroups).sort();
+    sortedHosts.forEach(hostname => {
+      const hostLogs = hostGroups[hostname];
+      const subKey = `${domain}|${hostname}`; // untuk state ekspansi
+
+      const subDiv = document.createElement('div');
+      subDiv.className = 'sub-log-group';
+
+      // ---- Header subdomain ----
+      const subHeader = document.createElement('div');
+      subHeader.className = 'group-header sub-header';
+      subHeader.innerHTML = `
+        <span class="group-toggle">+ </span>
+        <span class="group-name">📁 ${escapeHtml(hostname)}</span>
+        <span class="group-count">(${hostLogs.length})</span>
+      `;
+      subHeader.addEventListener('click', () => {
+        const body = subDiv.querySelector('.sub-group-body');
+        const toggle = subHeader.querySelector('.group-toggle');
+        const isExpanded = !body.classList.contains('collapsed');
+        if (isExpanded) {
+          body.classList.add('collapsed');
+          toggle.textContent = '+  ';
+          expandedSubGroups.delete(subKey);
+        } else {
+          body.classList.remove('collapsed');
+          toggle.textContent = '-  ';
+          expandedSubGroups.add(subKey);
+        }
+      });
+      subDiv.appendChild(subHeader);
+
+      // ---- Body subdomain (daftar request) ----
+      const subBody = document.createElement('div');
+      subBody.className = 'sub-group-body';
+      if (expandedSubGroups.has(subKey)) {
+        subBody.classList.remove('collapsed');
+        subHeader.querySelector('.group-toggle').textContent = '- ';
+      } else {
+        subBody.classList.add('collapsed');
+        subHeader.querySelector('.group-toggle').textContent = '+ ';
+      }
+
+      hostLogs.forEach(log => {
+        const realIdx = logs.indexOf(log);
+        const entry = document.createElement('div');
+        const sc = statusClass(log.status);
+        entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
+        if (log.note) entry.classList.add('has-note');
+        const icon = getCategoryIcon(log.category);
+        entry.innerHTML = `
+          <span class="req-icon">${icon}</span>
+          <span class="status ${sc}">${log.status}</span>
+          <span class="method">${log.method || 'GET'}</span>
+          <span class="url">${escapeHtml(log.url)}</span>
+          ${log.note ? `<span class="note-icon">📝</span>` : ''}
+          <span class="time">${log.time || ''}</span>
+        `;
+        entry.addEventListener('click', () => selectLog(realIdx));
+        subBody.appendChild(entry);
+      });
+
+      subDiv.appendChild(subBody);
+      domainBody.appendChild(subDiv);
+    });
+
+    domainDiv.appendChild(domainBody);
+    logListContainer.appendChild(domainDiv);
   });
 
+  // Panggil callback jika diberikan
+  if (callback) callback();
+
+  // Update status text
   if (logs.length === 0) {
     statusText.textContent = 'Listening…';
   } else {
     statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
   }
 }
+
+// export function renderList(callback) {
+//   const filtered = filterLogs();
+//   countBadge.textContent = filtered.length;
+//   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
+
+//   // Group by hostname
+//   const groups = {};
+//   filtered.forEach(log => {
+//     let hostname = '';
+//     try {
+//       hostname = new URL(log.url).hostname;
+//     } catch {
+//       hostname = 'invalid';
+//     }
+//     if (!groups[hostname]) groups[hostname] = [];
+//     groups[hostname].push(log);
+//   });
+
+//   const sortedHostnames = Object.keys(groups).sort();
+
+//   logListContainer.innerHTML = '';
+//   sortedHostnames.forEach(hostname => {
+//     const groupLogs = groups[hostname];
+//     const groupDiv = document.createElement('div');
+//     groupDiv.className = 'log-group';
+
+//     // Header
+//     const header = document.createElement('div');
+//     header.className = 'group-header';
+//     header.innerHTML = `
+//       <span class="group-toggle">+ </span>
+//       <span class="group-name">🗂️ ${escapeHtml(hostname)}</span>
+//       <span class="group-count">(${groupLogs.length})</span>
+//     `;
+//     header.addEventListener('click', () => {
+//       const body = groupDiv.querySelector('.group-body');
+//       const toggle = header.querySelector('.group-toggle');
+//       const isExpanded = !body.classList.contains('collapsed');
+//       if (isExpanded) {
+//         body.classList.add('collapsed');
+//         toggle.textContent = '+  ';
+//         expandedGroups.delete(hostname);
+//       } else {
+//         body.classList.remove('collapsed');
+//         toggle.textContent = '-  ';
+//         expandedGroups.add(hostname);
+//       }
+//     });
+//     groupDiv.appendChild(header);
+
+//     // Body
+//     const body = document.createElement('div');
+//     body.className = 'group-body';
+//     if (expandedGroups.has(hostname)) {
+//       body.classList.remove('collapsed');
+//       header.querySelector('.group-toggle').textContent = '- ';
+//     } else {
+//       body.classList.add('collapsed');
+//       header.querySelector('.group-toggle').textContent = '+ ';
+//     }
+    
+//     groupLogs.forEach(log => {
+//       const realIdx = logs.indexOf(log);
+//       const entry = document.createElement('div');
+//       const sc = statusClass(log.status);
+//       entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
+//       if (log.note) entry.classList.add('has-note');
+//       const icon = getCategoryIcon(log.category);
+//       entry.innerHTML = `
+//         <span class="req-icon">${icon}</span>
+//         <span class="status ${sc}">${log.status}</span>
+//         <span class="method">${log.method || 'GET'}</span>
+//         <span class="url">${escapeHtml(log.url)}</span>
+//         ${log.note ? `<span class="note-icon">📝</span>` : ''}
+//         <span class="time">${log.time || ''}</span>
+//       `;
+//       entry.addEventListener('click', () => selectLog(realIdx));
+//       body.appendChild(entry);
+//     });
+//     groupDiv.appendChild(body);
+//     logListContainer.appendChild(groupDiv);
+//   });
+
+//   if (callback) callback();
+
+//   // console.log('CEK-calback =========>', callback? "Ada":"tak")
+
+//   if (logs.length === 0) {
+//     statusText.textContent = 'Listening…';
+//   } else {
+//     statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
+//   }
+// }
+
 
 // ── Select log ──
 export function selectLog(idx) {
@@ -117,6 +283,18 @@ export function selectLog(idx) {
   // setActiveSubTab('params');
   renderList();
   renderDetail(idx);
+}
+
+export function setLoading(isLoading) {
+
+  if (isLoading) {
+    container.hidden = false;
+    bar.classList.add('indeterminate');
+  } else {
+    container.hidden = true;
+    bar.classList.remove('indeterminate');
+    bar.style.width = '0%'; // reset
+  }
 }
 
 // ── renderDetail (selalu dalam mode edit untuk request) ──
@@ -362,7 +540,7 @@ export function renderDetail(idx) {
   if (noteTextarea) noteTextarea.addEventListener('input', () => {
     logs[idx].note = noteTextarea.value;
     saveLogs();
-    renderList();
+    // renderList();
   });
 
   // Selalu pasang event untuk subtab (update log saat input berubah)
