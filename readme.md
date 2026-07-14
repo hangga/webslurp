@@ -1,7 +1,7 @@
 # WebSlurp
 
 <p align="center">
-  <img src="logo-dark.png" width="320" alt="WebSlurp Logo">
+  <img src="logo-512.png" width="320" alt="WebSlurp Logo">
 </p>
 
 # WebSlurp
@@ -75,5 +75,5 @@ Install WebSlurp, open Chrome DevTools, and start capturing.
 A new **WebSlurp** tab will appear.
 
 <p align="center">
-Made with ❤️ by Hangga Aji Sayekti
+Made with ❤️ by <a href="https://hangga.web.id/">Hangga Aji Sayekti</a>
 </p>

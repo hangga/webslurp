@@ -106,7 +106,7 @@ export function renderList(callback) {
       subHeader.className = 'group-header sub-header';
       subHeader.innerHTML = `
         <span class="group-toggle">+ </span>
-        <span class="group-name">📁 ${escapeHtml(hostname)}</span>
+        <span class="group-name">🗂️ ${escapeHtml(hostname)}</span>
         <span class="group-count">(${hostLogs.length})</span>
       `;
       subHeader.addEventListener('click', () => {
