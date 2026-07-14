@@ -1,332 +1,171 @@
-import { logs, activeSubTab, setActiveSubTab, statusText } from './state.js';
+// events.js
+import { logs, selectedId, activeSubTab, setActiveSubTab, statusText } from './state.js';
 import { escapeHtml, headersToObject, buildUrlWithParams } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderDetail } from './render.js';
 
-// ── attachSubtabEvents ──
-export function attachSubtabEvents(idx) {
-  const log = logs[idx];
-  if (!log) return;
+let detailDelegationActive = false;
 
-  // ── Params ──
-  const paramRows = document.querySelectorAll('.params-row:not(.header-row)');
-  const paramAdd = document.querySelector('.param-add');
-  const updateParams = () => {
-    const params = [];
+// ── Setup delegation pada detailContent ──
+export function setupDetailDelegation() {
+  const detailContent = document.getElementById('detail-content');
+  if (!detailContent) return;
+  if (detailDelegationActive) return;
 
-    document
-      .querySelectorAll('.params-row:not(.header-row)')
-      .forEach((r) => {
-        const key = r.querySelector('.param-key').value.trim();
-        const value = r.querySelector('.param-value').value;
+  // --- Delegasi untuk input di params, headers, form, urlencoded ---
+  detailContent.addEventListener('input', function(e) {
+    const target = e.target;
+    const log = getCurrentLog();
+    if (!log) return;
 
-        if (key) {
-          params.push({ key, value });
-        }
-      });
-
-    log.queryParams = params;
-
-    const urlInput = document.getElementById('edit-url');
-
-    if (urlInput) {
-      // Hapus query string lama
-      const baseUrl = urlInput.value.split('?')[0];
-
-      // Buat query string baru dari params
-      const query = new URLSearchParams(
-        params.map(({ key, value }) => [key, value])
-      ).toString();
-
-      // Gabungkan kembali
-      const newUrl = query ? `${baseUrl}?${query}` : baseUrl;
-
-      log.url = newUrl;
-      urlInput.value = newUrl;
+    // Params
+    if (target.closest('.params-row')) {
+      updateParamsFromUI(log);
+      return;
     }
-
-    saveLogs();
-  };
-
-  paramRows.forEach(row => {
-    row.querySelector('.param-key').addEventListener('input', updateParams);
-    row.querySelector('.param-value').addEventListener('input', updateParams);
-    row.querySelector('.param-remove').addEventListener('click', () => {
-      if (document.querySelectorAll('.params-row:not(.header-row)').length <= 1) return;
-      row.remove();
-      updateParams();
-    });
+    // Headers
+    if (target.closest('.headers-row')) {
+      updateHeadersFromUI(log);
+      return;
+    }
+    // Form-data
+    if (target.closest('.form-row')) {
+      updateFormFieldsFromUI(log);
+      return;
+    }
+    // Urlencoded
+    if (target.closest('.urlencoded-row')) {
+      updateUrlencodedFromUI(log);
+      return;
+    }
   });
-  if (paramAdd) {
-    paramAdd.addEventListener('click', () => {
-      const container = document.querySelector('.params-table');
-      const row = document.createElement('div');
-      row.className = 'params-row';
-      row.innerHTML = `<div class="pkey"><input class="param-key" placeholder="Key" /></div><div class="pvalue"><input class="param-value" placeholder="Value" /></div><div class="paction"><button class="param-remove">×</button></div>`;
-      container.insertBefore(row, paramAdd);
-      attachSubtabEvents(idx);
-      updateParams();
-    });
-  }
 
-  // Add
-  if (paramAdd) {
-    paramAdd.addEventListener("click", () => {
-      const row = document.createElement("div");
+  // --- Delegasi untuk klik tombol add/remove ---
+  detailContent.addEventListener('click', function(e) {
+    const target = e.target;
+    const log = getCurrentLog();
+    if (!log) return;
 
-      row.className = "params-row";
-      row.innerHTML = `
-        <div class="pkey">
-          <input class="param-key" placeholder="Key" />
-        </div>
-        <div class="pvalue">
-          <input class="param-value" placeholder="Value" />
-        </div>
-        <div class="paction">
-          <button class="param-remove">×</button>
-        </div>
-      `;
-
-      // paramTable.insertBefore(row, paramAdd);
-
-      row.querySelector(".param-key").focus();
-
-      updateParams();
-    });
-  }
-
-  // ── Auth ──
-  const authType = document.getElementById('auth-type');
-  if (authType) {
-    authType.addEventListener('change', () => {
-      log.auth.type = authType.value;
-      if (authType.value === 'none') log.auth = { type: 'none' };
-      else if (authType.value === 'basic') log.auth = { type: 'basic', username: '', password: '' };
-      else if (authType.value === 'bearer') log.auth = { type: 'bearer', token: '' };
-      else if (authType.value === 'oauth2') log.auth = { type: 'oauth2', grantType: 'client_credentials', tokenUrl: '', clientId: '', clientSecret: '', scope: '', accessToken: '' };
-      saveLogs();
-      renderDetail(idx);
-    });
-  }
-  const basicUsername = document.getElementById('auth-basic-username');
-  const basicPassword = document.getElementById('auth-basic-password');
-  if (basicUsername) basicUsername.addEventListener('input', () => { log.auth.username = basicUsername.value; saveLogs(); });
-  if (basicPassword) basicPassword.addEventListener('input', () => { log.auth.password = basicPassword.value; saveLogs(); });
-  const bearerToken = document.getElementById('auth-bearer-token');
-  if (bearerToken) bearerToken.addEventListener('input', () => { log.auth.token = bearerToken.value; saveLogs(); });
-
-  // OAuth2
-  const oauth2Grant = document.getElementById('auth-oauth2-grant');
-  const oauth2TokenUrl = document.getElementById('auth-oauth2-tokenurl');
-  const oauth2ClientId = document.getElementById('auth-oauth2-clientid');
-  const oauth2ClientSecret = document.getElementById('auth-oauth2-clientsecret');
-  const oauth2Scope = document.getElementById('auth-oauth2-scope');
-  const oauth2Username = document.getElementById('auth-oauth2-username');
-  const oauth2Password = document.getElementById('auth-oauth2-password');
-  const oauth2AccessToken = document.getElementById('auth-oauth2-accesstoken');
-  const fetchTokenBtn = document.getElementById('auth-oauth2-fetch-token');
-
-  const saveOAuth2Field = (field, value) => {
-    if (!log.auth) log.auth = { type: 'oauth2' };
-    log.auth[field] = value;
-    saveLogs();
-  };
-  if (oauth2Grant) oauth2Grant.addEventListener('change', () => { log.auth.grantType = oauth2Grant.value; saveLogs(); renderDetail(idx); });
-  if (oauth2TokenUrl) oauth2TokenUrl.addEventListener('input', () => saveOAuth2Field('tokenUrl', oauth2TokenUrl.value));
-  if (oauth2ClientId) oauth2ClientId.addEventListener('input', () => saveOAuth2Field('clientId', oauth2ClientId.value));
-  if (oauth2ClientSecret) oauth2ClientSecret.addEventListener('input', () => saveOAuth2Field('clientSecret', oauth2ClientSecret.value));
-  if (oauth2Scope) oauth2Scope.addEventListener('input', () => saveOAuth2Field('scope', oauth2Scope.value));
-  if (oauth2Username) oauth2Username.addEventListener('input', () => saveOAuth2Field('username', oauth2Username.value));
-  if (oauth2Password) oauth2Password.addEventListener('input', () => saveOAuth2Field('password', oauth2Password.value));
-  if (oauth2AccessToken) oauth2AccessToken.addEventListener('input', () => saveOAuth2Field('accessToken', oauth2AccessToken.value));
-
-  if (fetchTokenBtn) {
-    fetchTokenBtn.addEventListener('click', async () => {
-      const auth = log.auth;
-      if (!auth.tokenUrl) { statusText.textContent = 'Token URL is required'; return; }
-      const body = new URLSearchParams();
-      body.append('grant_type', auth.grantType);
-      if (auth.grantType === 'client_credentials') {
-        body.append('client_id', auth.clientId || '');
-        body.append('client_secret', auth.clientSecret || '');
-      } else if (auth.grantType === 'password') {
-        body.append('username', auth.username || '');
-        body.append('password', auth.password || '');
-        body.append('client_id', auth.clientId || '');
-        body.append('client_secret', auth.clientSecret || '');
-      }
-      if (auth.scope) body.append('scope', auth.scope);
-      try {
-        statusText.textContent = 'Fetching token...';
-        const resp = await fetch(auth.tokenUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: body.toString()
-        });
-        const data = await resp.json();
-        if (data.access_token) {
-          auth.accessToken = data.access_token;
-          if (oauth2AccessToken) oauth2AccessToken.value = data.access_token;
-          statusText.textContent = 'Token obtained!';
-          saveLogs();
-        } else {
-          statusText.textContent = 'Error: ' + (data.error || 'No access_token');
-        }
-      } catch (err) {
-        statusText.textContent = 'Error: ' + err.message;
-      }
-    });
-  }
-
-  // ── Headers ──
-  const headersContainer = document.getElementById('headers-container');
-  if (headersContainer) {
-    headersContainer.addEventListener('click', (e) => {
-      if (e.target.classList.contains('header-remove')) {
-        const row = e.target.closest('.headers-row');
-        if (document.querySelectorAll('#headers-container .headers-row:not(.header-row)').length <= 1) return;
-        row.remove();
-        updateHeadersFromUI(idx);
-      }
-    });
-    const addBtn = headersContainer.querySelector('.header-add');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        const row = document.createElement('div');
-        row.className = 'headers-row';
-        row.innerHTML = `<div class="hkey"><input class="header-key" placeholder="Key" /></div><div class="hvalue"><input class="header-value" placeholder="Value" /></div><div class="haction"><button class="header-remove">×</button></div>`;
-        headersContainer.insertBefore(row, addBtn);
-        attachSubtabEvents(idx);
-        updateHeadersFromUI(idx);
-      });
+    // Params: tombol add
+    if (target.classList.contains('param-add')) {
+      addParamRow(target);
+      updateParamsFromUI(log);
+      return;
     }
-    headersContainer.querySelectorAll('.headers-row:not(.header-row)').forEach(row => {
-      row.querySelector('.header-key').addEventListener('input', () => updateHeadersFromUI(idx));
-      row.querySelector('.header-value').addEventListener('input', () => updateHeadersFromUI(idx));
-    });
-  }
-
-  // ── Body ──
-  const bodyMode = document.getElementById('body-mode');
-  if (bodyMode) {
-    bodyMode.addEventListener('change', () => {
-      log.bodyMode = bodyMode.value;
-      if (bodyMode.value === 'none') { log.requestBody = ''; log.formDataFields = []; }
-      else if (bodyMode.value === 'form-data') { log.formDataFields = log.formDataFields || []; if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '', type: 'text' }]; }
-      else if (bodyMode.value === 'x-www-form-urlencoded') { log.formDataFields = log.formDataFields || []; if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '' }]; }
-      else if (bodyMode.value === 'raw') { log.requestBody = log.requestBody || ''; }
-      saveLogs();
-      renderDetail(idx);
-    });
-  }
-  const bodyRawType = document.getElementById('body-raw-type');
-  if (bodyRawType) bodyRawType.addEventListener('change', () => { log.bodyRawType = bodyRawType.value; saveLogs(); });
-  const bodyTextarea = document.getElementById('edit-body');
-  if (bodyTextarea) bodyTextarea.addEventListener('input', () => { log.requestBody = bodyTextarea.value; saveLogs(); });
-
-  // ── Form Data ──
-  const formContainer = document.querySelector('.form-data-fields');
-  if (formContainer) {
-    const addFormBtn = formContainer.querySelector('.form-add');
-    if (addFormBtn) {
-      addFormBtn.addEventListener('click', () => {
-        const row = document.createElement('div');
-        row.className = 'form-row';
-        row.innerHTML = `<div class="fkey"><input class="form-key" placeholder="Key" /></div><div class="fvalue"><input class="form-text" placeholder="Value" /></div><div class="ftype"><select class="form-type"><option value="text" selected>Text</option><option value="file">File</option></select></div><div class="faction"><button class="form-remove">×</button></div>`;
-        formContainer.insertBefore(row, addFormBtn);
-        attachSubtabEvents(idx);
-        updateFormFieldsFromUI(idx);
-      });
-    }
-    formContainer.querySelectorAll('.form-row:not(.header-row)').forEach(row => {
-      attachFormRowEvents(row, idx);
-    });
-    formContainer.addEventListener('click', (e) => {
-      if (e.target.classList.contains('form-remove')) {
-        const row = e.target.closest('.form-row');
-        if (document.querySelectorAll('.form-row:not(.header-row)').length <= 1) return;
+    // Params: tombol remove
+    if (target.classList.contains('param-remove')) {
+      const row = target.closest('.params-row');
+      if (row && document.querySelectorAll('.params-row:not(.header-row)').length > 1) {
         row.remove();
-        updateFormFieldsFromUI(idx);
+        updateParamsFromUI(log);
       }
-    });
-  }
-
-  // ── URL Encoded ──
-  const urlencodedContainer = document.querySelector('.urlencoded-fields');
-  if (urlencodedContainer) {
-    const addUrlencodedBtn = urlencodedContainer.querySelector('.urlencoded-add');
-    if (addUrlencodedBtn) {
-      addUrlencodedBtn.addEventListener('click', () => {
-        const row = document.createElement('div');
-        row.className = 'urlencoded-row';
-        row.innerHTML = `<div class="ukey"><input class="urlencoded-key" placeholder="Key" /></div><div class="uvalue"><input class="urlencoded-value" placeholder="Value" /></div><div class="uaction"><button class="urlencoded-remove">×</button></div>`;
-        urlencodedContainer.insertBefore(row, addUrlencodedBtn);
-        attachSubtabEvents(idx);
-        updateUrlencodedFromUI(idx);
-      });
+      return;
     }
-    urlencodedContainer.querySelectorAll('.urlencoded-row:not(.header-row)').forEach(row => {
-      attachUrlencodedRowEvents(row, idx);
-    });
-    urlencodedContainer.addEventListener('click', (e) => {
-      if (e.target.classList.contains('urlencoded-remove')) {
-        const row = e.target.closest('.urlencoded-row');
-        if (document.querySelectorAll('.urlencoded-row:not(.header-row)').length <= 1) return;
+
+    // Headers: tombol add
+    if (target.classList.contains('header-add')) {
+      addHeaderRow(target);
+      updateHeadersFromUI(log);
+      return;
+    }
+    // Headers: tombol remove
+    if (target.classList.contains('header-remove')) {
+      const row = target.closest('.headers-row');
+      if (row && document.querySelectorAll('#headers-container .headers-row:not(.header-row)').length > 1) {
         row.remove();
-        updateUrlencodedFromUI(idx);
+        updateHeadersFromUI(log);
       }
-    });
-  }
+      return;
+    }
 
-  // ── Method & URL ──
-  const methodSelect = document.getElementById('edit-method');
-  const urlInput = document.getElementById('edit-url');
-  if (methodSelect) methodSelect.addEventListener('change', () => { log.method = methodSelect.value; saveLogs(); });
-  if (urlInput) {
-    urlInput.addEventListener('input', () => {
-      log.url = urlInput.value;
-      saveLogs();
+    // Form-data: tombol add
+    if (target.classList.contains('form-add')) {
+      addFormRow(target);
+      updateFormFieldsFromUI(log);
+      return;
+    }
+    // Form-data: tombol remove
+    if (target.classList.contains('form-remove')) {
+      const row = target.closest('.form-row');
+      if (row && document.querySelectorAll('.form-row:not(.header-row)').length > 1) {
+        row.remove();
+        updateFormFieldsFromUI(log);
+      }
+      return;
+    }
 
-      // const preview = document.getElementById('url-preview');
+    // Urlencoded: tombol add
+    if (target.classList.contains('urlencoded-add')) {
+      addUrlencodedRow(target);
+      updateUrlencodedFromUI(log);
+      return;
+    }
+    // Urlencoded: tombol remove
+    if (target.classList.contains('urlencoded-remove')) {
+      const row = target.closest('.urlencoded-row');
+      if (row && document.querySelectorAll('.urlencoded-row:not(.header-row)').length > 1) {
+        row.remove();
+        updateUrlencodedFromUI(log);
+      }
+      return;
+    }
+  });
 
-      // if (preview) {
-      //   preview.textContent = buildUrlWithParams(log);
-      // }
-    });
-  }
+  detailDelegationActive = true;
 }
 
-// ── updateHeadersFromUI ──
-export function updateHeadersFromUI(idx) {
-  const log = logs[idx];
-  if (!log) return;
+// ── Helper: ambil log yang sedang dipilih ──
+function getCurrentLog() {
+  if (selectedId === null || selectedId === undefined) return null;
+  return logs[selectedId] || null;
+}
+
+// ── Fungsi update (tanpa idx, ambil dari state) ──
+function updateParamsFromUI(log) {
+  const params = [];
+  document.querySelectorAll('.params-row:not(.header-row)').forEach(row => {
+    const key = row.querySelector('.param-key')?.value.trim() || '';
+    const value = row.querySelector('.param-value')?.value || '';
+    if (key) params.push({ key, value });
+  });
+  log.queryParams = params;
+  // Update URL
+  const urlInput = document.getElementById('edit-url');
+  if (urlInput) {
+    const baseUrl = urlInput.value.split('?')[0];
+    const query = new URLSearchParams(params.map(p => [p.key, p.value])).toString();
+    const newUrl = query ? `${baseUrl}?${query}` : baseUrl;
+    log.url = newUrl;
+    urlInput.value = newUrl;
+  }
+  saveLogs();
+}
+
+function updateHeadersFromUI(log) {
   const headers = [];
   document.querySelectorAll('#headers-container .headers-row:not(.header-row)').forEach(row => {
-    const key = row.querySelector('.header-key').value.trim();
-    const val = row.querySelector('.header-value').value;
+    const key = row.querySelector('.header-key')?.value.trim() || '';
+    const val = row.querySelector('.header-value')?.value || '';
     if (key) headers.push({ key, value: val });
   });
   log.requestHeaders = headersToObject(headers);
   saveLogs();
 }
 
-// ── updateFormFieldsFromUI ──
-export function updateFormFieldsFromUI(idx) {
-  const log = logs[idx];
-  if (!log) return;
+function updateFormFieldsFromUI(log) {
   const fields = [];
   document.querySelectorAll('.form-data-fields .form-row:not(.header-row)').forEach(row => {
-    const key = row.querySelector('.form-key').value.trim();
+    const key = row.querySelector('.form-key')?.value.trim() || '';
     const typeSelect = row.querySelector('.form-type');
     const type = typeSelect ? typeSelect.value : 'text';
     if (key) {
       if (type === 'text') {
-        const val = row.querySelector('.form-text').value;
+        const val = row.querySelector('.form-text')?.value || '';
         fields.push({ key, value: val, type: 'text' });
       } else {
         const fileInput = row.querySelector('.form-file');
-        const filename = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '';
-        const fileObj = fileInput && fileInput.files[0] ? fileInput.files[0] : null;
+        const fileObj = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        const filename = fileObj ? fileObj.name : '';
         fields.push({ key, value: filename, type: 'file', fileObj });
       }
     }
@@ -335,57 +174,274 @@ export function updateFormFieldsFromUI(idx) {
   saveLogs();
 }
 
-// ── attachFormRowEvents ──
-export function attachFormRowEvents(row, idx) {
-  const keyInput = row.querySelector('.form-key');
-  const valInput = row.querySelector('.form-text');
-  const fileInput = row.querySelector('.form-file');
-  const typeSelect = row.querySelector('.form-type');
-  const rmBtn = row.querySelector('.form-remove');
-  const update = () => updateFormFieldsFromUI(idx);
-  if (keyInput) keyInput.addEventListener('input', update);
-  if (valInput) valInput.addEventListener('input', update);
-  if (fileInput) fileInput.addEventListener('change', update);
-  if (typeSelect) {
-    typeSelect.addEventListener('change', () => {
-      const valueCell = row.querySelector('.fvalue');
-      if (typeSelect.value === 'file') {
-        valueCell.innerHTML = `<input class="form-file" type="file" />`;
-        const newFile = valueCell.querySelector('.form-file');
-        if (newFile) newFile.addEventListener('change', update);
-      } else {
-        const currentVal = row.querySelector('.form-file') ? '' : (row.querySelector('.form-text') ? row.querySelector('.form-text').value : '');
-        valueCell.innerHTML = `<input class="form-text" value="${escapeHtml(currentVal)}" placeholder="Value" />`;
-        const newText = valueCell.querySelector('.form-text');
-        if (newText) newText.addEventListener('input', update);
-      }
-      update();
-    });
-  }
-  if (rmBtn) rmBtn.addEventListener('click', update);
-}
-
-// ── updateUrlencodedFromUI ──
-export function updateUrlencodedFromUI(idx) {
-  const log = logs[idx];
-  if (!log) return;
+function updateUrlencodedFromUI(log) {
   const fields = [];
   document.querySelectorAll('.urlencoded-fields .urlencoded-row:not(.header-row)').forEach(row => {
-    const key = row.querySelector('.urlencoded-key').value.trim();
-    const val = row.querySelector('.urlencoded-value').value;
+    const key = row.querySelector('.urlencoded-key')?.value.trim() || '';
+    const val = row.querySelector('.urlencoded-value')?.value || '';
     if (key) fields.push({ key, value: val });
   });
   log.formDataFields = fields;
   saveLogs();
 }
 
-// ── attachUrlencodedRowEvents ──
-export function attachUrlencodedRowEvents(row, idx) {
-  const keyInput = row.querySelector('.urlencoded-key');
-  const valInput = row.querySelector('.urlencoded-value');
-  const rmBtn = row.querySelector('.urlencoded-remove');
-  const update = () => updateUrlencodedFromUI(idx);
-  if (keyInput) keyInput.addEventListener('input', update);
-  if (valInput) valInput.addEventListener('input', update);
-  if (rmBtn) rmBtn.addEventListener('click', update);
+// ── Fungsi tambah baris ──
+function addParamRow(addBtn) {
+  const container = addBtn.closest('.params-table');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'params-row';
+  row.innerHTML = `
+    <div class="pkey"><input class="param-key" placeholder="Key" /></div>
+    <div class="pvalue"><input class="param-value" placeholder="Value" /></div>
+    <div class="paction"><button class="param-remove">×</button></div>
+  `;
+  container.insertBefore(row, addBtn);
+  row.querySelector('.param-key')?.focus();
+}
+
+function addHeaderRow(addBtn) {
+  const container = addBtn.closest('#headers-container');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'headers-row';
+  row.innerHTML = `
+    <div class="hkey"><input class="header-key" placeholder="Key" /></div>
+    <div class="hvalue"><input class="header-value" placeholder="Value" /></div>
+    <div class="haction"><button class="header-remove">×</button></div>
+  `;
+  container.insertBefore(row, addBtn);
+  row.querySelector('.header-key')?.focus();
+}
+
+function addFormRow(addBtn) {
+  const container = addBtn.closest('.form-data-fields');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'form-row';
+  row.innerHTML = `
+    <div class="fkey"><input class="form-key" placeholder="Key" /></div>
+    <div class="fvalue"><input class="form-text" placeholder="Value" /></div>
+    <div class="ftype"><select class="form-type"><option value="text" selected>Text</option><option value="file">File</option></select></div>
+    <div class="faction"><button class="form-remove">×</button></div>
+  `;
+  container.insertBefore(row, addBtn);
+  row.querySelector('.form-key')?.focus();
+}
+
+function addUrlencodedRow(addBtn) {
+  const container = addBtn.closest('.urlencoded-fields');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'urlencoded-row';
+  row.innerHTML = `
+    <div class="ukey"><input class="urlencoded-key" placeholder="Key" /></div>
+    <div class="uvalue"><input class="urlencoded-value" placeholder="Value" /></div>
+    <div class="uaction"><button class="urlencoded-remove">×</button></div>
+  `;
+  container.insertBefore(row, addBtn);
+  row.querySelector('.urlencoded-key')?.focus();
+}
+
+// ── attachSubtabEvents (hanya untuk elemen tunggal dan inisialisasi delegation) ──
+export function attachSubtabEvents(idx) {
+  const log = logs[idx];
+  if (!log) return;
+
+  // Pastikan delegation sudah aktif
+  setupDetailDelegation();
+
+  // ── Elemen tunggal: method, url, body mode, auth, dll. ──
+  const methodSelect = document.getElementById('edit-method');
+  if (methodSelect) {
+    // Hapus listener lama jika ada (gunakan replace)
+    methodSelect.replaceWith(methodSelect.cloneNode(true));
+    const newMethod = document.getElementById('edit-method');
+    if (newMethod) {
+      newMethod.addEventListener('change', () => {
+        log.method = newMethod.value;
+        saveLogs();
+      });
+    }
+  }
+
+  const urlInput = document.getElementById('edit-url');
+  if (urlInput) {
+    urlInput.replaceWith(urlInput.cloneNode(true));
+    const newUrl = document.getElementById('edit-url');
+    if (newUrl) {
+      newUrl.addEventListener('input', () => {
+        log.url = newUrl.value;
+        saveLogs();
+      });
+    }
+  }
+
+  // Body mode
+  const bodyMode = document.getElementById('body-mode');
+  if (bodyMode) {
+    bodyMode.replaceWith(bodyMode.cloneNode(true));
+    const newBodyMode = document.getElementById('body-mode');
+    if (newBodyMode) {
+      newBodyMode.addEventListener('change', () => {
+        log.bodyMode = newBodyMode.value;
+        if (newBodyMode.value === 'none') { log.requestBody = ''; log.formDataFields = []; }
+        else if (newBodyMode.value === 'form-data') { log.formDataFields = log.formDataFields || []; if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '', type: 'text' }]; }
+        else if (newBodyMode.value === 'x-www-form-urlencoded') { log.formDataFields = log.formDataFields || []; if (log.formDataFields.length === 0) log.formDataFields = [{ key: '', value: '' }]; }
+        else if (newBodyMode.value === 'raw') { log.requestBody = log.requestBody || ''; }
+        saveLogs();
+        renderDetail(idx);
+      });
+    }
+  }
+
+  // Body raw type
+  const bodyRawType = document.getElementById('body-raw-type');
+  if (bodyRawType) {
+    bodyRawType.replaceWith(bodyRawType.cloneNode(true));
+    const newRawType = document.getElementById('body-raw-type');
+    if (newRawType) {
+      newRawType.addEventListener('change', () => {
+        log.bodyRawType = newRawType.value;
+        saveLogs();
+      });
+    }
+  }
+
+  // Body textarea
+  const bodyTextarea = document.getElementById('edit-body');
+  if (bodyTextarea) {
+    bodyTextarea.replaceWith(bodyTextarea.cloneNode(true));
+    const newTextarea = document.getElementById('edit-body');
+    if (newTextarea) {
+      newTextarea.addEventListener('input', () => {
+        log.requestBody = newTextarea.value;
+        saveLogs();
+      });
+    }
+  }
+
+  // ── Auth ──
+  const authType = document.getElementById('auth-type');
+  if (authType) {
+    authType.replaceWith(authType.cloneNode(true));
+    const newAuthType = document.getElementById('auth-type');
+    if (newAuthType) {
+      newAuthType.addEventListener('change', () => {
+        log.auth.type = newAuthType.value;
+        if (newAuthType.value === 'none') log.auth = { type: 'none' };
+        else if (newAuthType.value === 'basic') log.auth = { type: 'basic', username: '', password: '' };
+        else if (newAuthType.value === 'bearer') log.auth = { type: 'bearer', token: '' };
+        else if (newAuthType.value === 'oauth2') log.auth = { type: 'oauth2', grantType: 'client_credentials', tokenUrl: '', clientId: '', clientSecret: '', scope: '', accessToken: '' };
+        saveLogs();
+        renderDetail(idx);
+      });
+    }
+  }
+
+  // Basic auth fields
+  const basicUsername = document.getElementById('auth-basic-username');
+  if (basicUsername) {
+    basicUsername.replaceWith(basicUsername.cloneNode(true));
+    const newUser = document.getElementById('auth-basic-username');
+    if (newUser) newUser.addEventListener('input', () => { log.auth.username = newUser.value; saveLogs(); });
+  }
+  const basicPassword = document.getElementById('auth-basic-password');
+  if (basicPassword) {
+    basicPassword.replaceWith(basicPassword.cloneNode(true));
+    const newPass = document.getElementById('auth-basic-password');
+    if (newPass) newPass.addEventListener('input', () => { log.auth.password = newPass.value; saveLogs(); });
+  }
+
+  const bearerToken = document.getElementById('auth-bearer-token');
+  if (bearerToken) {
+    bearerToken.replaceWith(bearerToken.cloneNode(true));
+    const newToken = document.getElementById('auth-bearer-token');
+    if (newToken) newToken.addEventListener('input', () => { log.auth.token = newToken.value; saveLogs(); });
+  }
+
+  // OAuth2 fields (sama seperti di atas, kita pasang listener langsung)
+  const oauth2Grant = document.getElementById('auth-oauth2-grant');
+  if (oauth2Grant) {
+    oauth2Grant.replaceWith(oauth2Grant.cloneNode(true));
+    const newGrant = document.getElementById('auth-oauth2-grant');
+    if (newGrant) newGrant.addEventListener('change', () => { log.auth.grantType = newGrant.value; saveLogs(); renderDetail(idx); });
+  }
+  // ... dan seterusnya untuk field OAuth2 lainnya
+  // (Saya singkat agar tidak terlalu panjang, tapi prinsipnya sama: replace + addEventListener)
+
+  // Untuk OAuth2, kita bisa buat helper agar tidak berulang
+  attachOAuth2Events(idx, log);
+
+  // Tombol Fetch Token
+  const fetchTokenBtn = document.getElementById('auth-oauth2-fetch-token');
+  if (fetchTokenBtn) {
+    fetchTokenBtn.replaceWith(fetchTokenBtn.cloneNode(true));
+    const newBtn = document.getElementById('auth-oauth2-fetch-token');
+    if (newBtn) {
+      newBtn.addEventListener('click', async () => {
+        const auth = log.auth;
+        if (!auth.tokenUrl) { statusText.textContent = 'Token URL is required'; return; }
+        const body = new URLSearchParams();
+        body.append('grant_type', auth.grantType);
+        if (auth.grantType === 'client_credentials') {
+          body.append('client_id', auth.clientId || '');
+          body.append('client_secret', auth.clientSecret || '');
+        } else if (auth.grantType === 'password') {
+          body.append('username', auth.username || '');
+          body.append('password', auth.password || '');
+          body.append('client_id', auth.clientId || '');
+          body.append('client_secret', auth.clientSecret || '');
+        }
+        if (auth.scope) body.append('scope', auth.scope);
+        try {
+          statusText.textContent = 'Fetching token...';
+          const resp = await fetch(auth.tokenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+          });
+          const data = await resp.json();
+          if (data.access_token) {
+            auth.accessToken = data.access_token;
+            const accessTokenInput = document.getElementById('auth-oauth2-accesstoken');
+            if (accessTokenInput) accessTokenInput.value = data.access_token;
+            statusText.textContent = 'Token obtained!';
+            saveLogs();
+          } else {
+            statusText.textContent = 'Error: ' + (data.error || 'No access_token');
+          }
+        } catch (err) {
+          statusText.textContent = 'Error: ' + err.message;
+        }
+      });
+    }
+  }
+}
+
+// ── Helper untuk OAuth2 field ──
+function attachOAuth2Events(idx, log) {
+  const fields = [
+    { id: 'auth-oauth2-tokenurl', prop: 'tokenUrl' },
+    { id: 'auth-oauth2-clientid', prop: 'clientId' },
+    { id: 'auth-oauth2-clientsecret', prop: 'clientSecret' },
+    { id: 'auth-oauth2-scope', prop: 'scope' },
+    { id: 'auth-oauth2-username', prop: 'username' },
+    { id: 'auth-oauth2-password', prop: 'password' },
+    { id: 'auth-oauth2-accesstoken', prop: 'accessToken' }
+  ];
+  fields.forEach(({ id, prop }) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.replaceWith(el.cloneNode(true));
+      const newEl = document.getElementById(id);
+      if (newEl) {
+        newEl.addEventListener('input', () => {
+          if (!log.auth) log.auth = { type: 'oauth2' };
+          log.auth[prop] = newEl.value;
+          saveLogs();
+        });
+      }
+    }
+  });
 }

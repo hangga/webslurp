@@ -253,14 +253,14 @@ export function selectLog(idx) {
 }
 
 export function setLoading(isLoading) {
-  if (isLoading) {
-    container.hidden = false;
-    bar.classList.add('indeterminate');
-  } else {
-    container.hidden = true;
-    bar.classList.remove('indeterminate');
-    bar.style.width = '0%';
-  }
+  // if (isLoading) {
+  //   container.hidden = false;
+  //   bar.classList.add('indeterminate');
+  // } else {
+  //   container.hidden = true;
+  //   bar.classList.remove('indeterminate');
+  //   bar.style.width = '0%';
+  // }
 }
 
 // ── renderDetail (tidak diubah, hanya perbaikan error null di clearHighlight) ──

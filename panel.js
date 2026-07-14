@@ -65,7 +65,8 @@ document.getElementById('clear').onclick = async () => {
   setSelectedId(null);
   setSendingId(null);
   await saveLogs();
-  renderList();
+  // renderList();
+  document.getElementById('log-list-container').replaceChildren();
   detailEmpty.style.display = 'block';
   detailContent.style.display = 'none';
   statusText.textContent = 'Cleared';
@@ -79,6 +80,8 @@ chrome.storage.onChanged.addListener((changes, ns) => {
 
 // ── INIT ──
 (async function init() {
+  setLogs([]);
+  saveLogs();
   await refresh();
   await loadTheme();
   await loadTimeoutSetting();
@@ -261,13 +264,13 @@ document.getElementById('import-btn')?.addEventListener('click', () => {
       // Refresh tampilan setelah import
       renderList();
       // Tampilkan detail log pertama (jika ada)
-      if (logs.length > 0) {
-        setSelectedId(0);
-        renderDetail(0);
-      } else {
-        // kosongkan detail
-        document.getElementById('detail-content').innerHTML = '<p class="empty">No logs</p>';
-      }
+      // if (logs.length > 0) {
+      //   setSelectedId(0);
+      //   renderDetail(0);
+      // } else {
+      //   // kosongkan detail
+      //   document.getElementById('detail-content').innerHTML = '<p class="empty">No logs</p>';
+      // }
     } catch (err) {
       alert('Gagal import: ' + err.message);
     }
