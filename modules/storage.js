@@ -1,16 +1,35 @@
 // storage.js
 import { logs, setLogs, ignoreStorageChange, setIgnoreStorageChange } from './state.js';
 
-const STORAGE_KEY = 'brutusuite_logs';
-const SETTINGS_KEY = 'brutusuite_settings';
+const STORAGE_KEY = 'WebSlurp_logs';
+const SETTINGS_KEY = 'WebSlurp_settings';
+const MAX_SAVED_LOGS = 200; // atau 3000
+
+// export async function saveLogs() {
+//   setIgnoreStorageChange(true);
+//   try {
+//     // await chrome.storage.local.set({ logs });
+//     const data = JSON.stringify(logs);
+//     await chrome.storage.local.set({ [STORAGE_KEY]: data });
+//   } catch (e){
+//     console.warn('[WebSlurp] Gagal menyimpan logs:', e);
+//   } finally {
+//     setIgnoreStorageChange(false);
+//   }
+// }
 
 export async function saveLogs() {
   setIgnoreStorageChange(true);
   try {
-    // await chrome.storage.local.set({ logs });
-    const data = JSON.stringify(logs);
+    let dataToSave = logs;
+    if (dataToSave.length > MAX_SAVED_LOGS) {
+      dataToSave = dataToSave.slice(-MAX_SAVED_LOGS);
+      // opsional: update state logs agar konsisten
+      // setLogs(dataToSave);
+    }
+    const data = JSON.stringify(dataToSave);
     await chrome.storage.local.set({ [STORAGE_KEY]: data });
-  } catch (e){
+  } catch (e) {
     console.warn('[BrutuSuite] Gagal menyimpan logs:', e);
   } finally {
     setIgnoreStorageChange(false);
@@ -29,7 +48,7 @@ export async function loadLogs() {
       if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
-    console.warn('[BrutuSuite] Gagal memuat logs:', e);
+    console.warn('[WebSlurp] Gagal memuat logs:', e);
   }
   return [];
 }
@@ -42,7 +61,7 @@ export async function saveSettings(settings) {
     const merged = { ...existing, ...settings };
     await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
   } catch (e) {
-    console.warn('[BrutuSuite] Gagal menyimpan settings:', e);
+    console.warn('[WebSlurp] Gagal menyimpan settings:', e);
   }
 }
 
@@ -53,7 +72,7 @@ export async function loadSettings() {
       return result[SETTINGS_KEY];
     }
   } catch (e) {
-    console.warn('[BrutuSuite] Gagal memuat settings:', e);
+    console.warn('[WebSlurp] Gagal memuat settings:', e);
   }
   return {};
 }
@@ -105,7 +124,7 @@ export function importLogsFromFile(file) {
         }
         // Validasi sederhana: pastikan setiap item memiliki properti url
         if (data.length > 0 && !data[0].url) {
-          reject(new Error('Data tidak dikenali sebagai log BrutuSuite.'));
+          reject(new Error('Data tidak dikenali sebagai log WebSlurp.'));
           return;
         }
         setLogs(data);

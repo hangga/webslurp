@@ -1,10 +1,10 @@
 # Project Structure
 
 ```plaintext
-BrutuSuite/
+WebSlurp/
 ├── manifest.json                # Extension manifest v3
 ├── devtools.html                # Entry point DevTools
-├── devtools.js                  # Membuat panel BrutuSuite di DevTools
+├── devtools.js                  # Membuat panel WebSlurp di DevTools
 ├── panel.html                   # UI utama panel
 ├── panel.css                    # Styling dengan 18 tema (CSS variables)
 ├── panel.js                     # Entry point utama (orchestrator)
