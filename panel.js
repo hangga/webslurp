@@ -84,7 +84,7 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   await loadTimeoutSetting();
   startCapture();
   statusText.textContent = 'Listening…';
-  console.log('[BrutuSuite] Panel siap, menunggu request...');
+  console.log('[WebSlurp] Panel siap, menunggu request...');
 })();
 
 // ── Tema ──

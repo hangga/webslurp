@@ -5,6 +5,7 @@
   "version": "1.4",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "tabs"
   ],
   "host_permissions": [

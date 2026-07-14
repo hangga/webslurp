@@ -500,7 +500,7 @@ export function renderDetail(idx) {
   const noteTextarea = document.getElementById('log-note');
   if (noteTextarea) noteTextarea.addEventListener('input', () => {
     logs[idx].note = noteTextarea.value;
-    saveLogs();
+    // saveLogs();
     // renderList();
   });
 

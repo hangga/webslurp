@@ -259,7 +259,7 @@ export function startCapture() {
       });
       responseBody = content;
     } catch (e) {
-      console.warn('[BrutuSuite] Gagal ambil response body:', e);
+      console.warn('[WebSlurp] Gagal ambil response body:', e);
       responseBody = '';
     }
 
@@ -558,7 +558,7 @@ export async function sendRequest(idx) {
     setCancelRequested(false);
     renderDetail(idx);
     statusText.textContent = `❌ ${sendError}`;
-    console.error('[BrutuSuite] Send error:', err);
+    console.error('[WebSlurp] Send error:', err);
   } finally {
     // Pastikan cleanup
     clearTimeout(timeoutId);
