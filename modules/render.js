@@ -1,4 +1,5 @@
-import { logs, selectedId,sendingId, activeTab, activeSubTab,
+// render.js
+import { logs, selectedId, sendingId, activeTab, activeSubTab,
          setSelectedId, setActiveTab, setActiveSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
@@ -14,18 +15,96 @@ import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
 const container = document.getElementById('progress-container');
 const bar = document.getElementById('progress-bar');
 const stickySearch = document.getElementById('sticky-search');
-// const expandedGroups = new Set();      // untuk domain utama (base domain)
-const expandedSubGroups = new Set();   // untuk subdomain (hostname lengkap), simpan sebaga
+const expandedSubGroups = new Set();
+
+// --- Batasi jumlah tampilan untuk mencegah hang ---
+const MAX_DISPLAY_LOGS = 200;
+let delegationInitialized = false;
+
+// ── Event delegation: pasang sekali di container ──
+export function initDelegation() {
+  if (delegationInitialized) return;
+  if (!logListContainer) return;
+
+  logListContainer.addEventListener('click', function(e) {
+    // 1. Klik pada log entry
+    const entry = e.target.closest('.log-entry');
+    if (entry) {
+      const idx = entry.dataset.index;
+      if (idx !== undefined) {
+        selectLog(parseInt(idx, 10));
+      }
+      return;
+    }
+
+    // 2. Klik pada header grup (domain atau subdomain)
+    const header = e.target.closest('.group-header');
+    if (header) {
+      // Tentukan apakah itu domain header atau sub-header
+      const domain = header.dataset.domain;
+      const subKey = header.dataset.subkey;
+
+      if (domain && !subKey) {
+        // Header domain utama
+        const groupDiv = header.closest('.log-group');
+        const body = groupDiv?.querySelector('.group-body');
+        const toggle = header.querySelector('.group-toggle');
+        if (body && toggle) {
+          const isExpanded = !body.classList.contains('collapsed');
+          if (isExpanded) {
+            body.classList.add('collapsed');
+            toggle.textContent = '+  ';
+            expandedGroups.delete(domain);
+          } else {
+            body.classList.remove('collapsed');
+            toggle.textContent = '-  ';
+            expandedGroups.add(domain);
+          }
+        }
+      } else if (subKey) {
+        // Header subdomain
+        const subDiv = header.closest('.sub-log-group');
+        const body = subDiv?.querySelector('.sub-group-body');
+        const toggle = header.querySelector('.group-toggle');
+        if (body && toggle) {
+          const isExpanded = !body.classList.contains('collapsed');
+          if (isExpanded) {
+            body.classList.add('collapsed');
+            toggle.textContent = '+  ';
+            expandedSubGroups.delete(subKey);
+          } else {
+            body.classList.remove('collapsed');
+            toggle.textContent = '-  ';
+            expandedSubGroups.add(subKey);
+          }
+        }
+      }
+    }
+  });
+
+  delegationInitialized = true;
+}
 
 // ── Render list (grouped by hostname) ──
 export function renderList(callback) {
+  // Pastikan delegation terpasang
+  initDelegation();
+
   const filtered = filterLogs();
   countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
 
+  // Batasi jumlah log yang ditampilkan (ambil N terakhir)
+  let displayLogs = filtered;
+  let truncated = false;
+  if (displayLogs.length > MAX_DISPLAY_LOGS) {
+    displayLogs = displayLogs.slice(-MAX_DISPLAY_LOGS);
+    truncated = true;
+  }
+
   // ---- 1. Kelompokkan berdasarkan domain utama ----
   const domainGroups = {};
-  filtered.forEach(log => {
+  displayLogs.forEach(log => {
     let hostname = '';
     try {
       hostname = new URL(log.url).hostname;
@@ -44,29 +123,17 @@ export function renderList(callback) {
     const domainLogs = domainGroups[domain];
     const domainDiv = document.createElement('div');
     domainDiv.className = 'log-group';
+    domainDiv.dataset.domain = domain;
 
     // ---- Header domain utama ----
     const domainHeader = document.createElement('div');
     domainHeader.className = 'group-header';
+    domainHeader.dataset.domain = domain;
     domainHeader.innerHTML = `
       <span class="group-toggle">+ </span>
       <span class="group-name">🗂️ ${escapeHtml(domain)}</span>
       <span class="group-count">(${domainLogs.length})</span>
     `;
-    domainHeader.addEventListener('click', () => {
-      const body = domainDiv.querySelector('.group-body');
-      const toggle = domainHeader.querySelector('.group-toggle');
-      const isExpanded = !body.classList.contains('collapsed');
-      if (isExpanded) {
-        body.classList.add('collapsed');
-        toggle.textContent = '+  ';
-        expandedGroups.delete(domain);
-      } else {
-        body.classList.remove('collapsed');
-        toggle.textContent = '-  ';
-        expandedGroups.add(domain);
-      }
-    });
     domainDiv.appendChild(domainHeader);
 
     // ---- Body domain utama ----
@@ -96,33 +163,21 @@ export function renderList(callback) {
     const sortedHosts = Object.keys(hostGroups).sort();
     sortedHosts.forEach(hostname => {
       const hostLogs = hostGroups[hostname];
-      const subKey = `${domain}|${hostname}`; // untuk state ekspansi
+      const subKey = `${domain}|${hostname}`;
 
       const subDiv = document.createElement('div');
       subDiv.className = 'sub-log-group';
+      subDiv.dataset.subkey = subKey;
 
       // ---- Header subdomain ----
       const subHeader = document.createElement('div');
       subHeader.className = 'group-header sub-header';
+      subHeader.dataset.subkey = subKey;
       subHeader.innerHTML = `
         <span class="group-toggle">+ </span>
         <span class="group-name">🗂️ ${escapeHtml(hostname)}</span>
         <span class="group-count">(${hostLogs.length})</span>
       `;
-      subHeader.addEventListener('click', () => {
-        const body = subDiv.querySelector('.sub-group-body');
-        const toggle = subHeader.querySelector('.group-toggle');
-        const isExpanded = !body.classList.contains('collapsed');
-        if (isExpanded) {
-          body.classList.add('collapsed');
-          toggle.textContent = '+  ';
-          expandedSubGroups.delete(subKey);
-        } else {
-          body.classList.remove('collapsed');
-          toggle.textContent = '-  ';
-          expandedSubGroups.add(subKey);
-        }
-      });
       subDiv.appendChild(subHeader);
 
       // ---- Body subdomain (daftar request) ----
@@ -142,6 +197,7 @@ export function renderList(callback) {
         const sc = statusClass(log.status);
         entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
         if (log.note) entry.classList.add('has-note');
+        entry.dataset.index = realIdx;
         const icon = getCategoryIcon(log.category);
         entry.innerHTML = `
           <span class="req-icon">${icon}</span>
@@ -151,7 +207,6 @@ export function renderList(callback) {
           ${log.note ? `<span class="note-icon">📝</span>` : ''}
           <span class="time">${log.time || ''}</span>
         `;
-        entry.addEventListener('click', () => selectLog(realIdx));
         subBody.appendChild(entry);
       });
 
@@ -163,6 +218,14 @@ export function renderList(callback) {
     logListContainer.appendChild(domainDiv);
   });
 
+  // Jika ada log yang terpotong, tampilkan info
+  if (truncated) {
+    const info = document.createElement('div');
+    info.style.cssText = 'padding:10px; text-align:center; color:#888; font-style:italic;';
+    info.textContent = `Only showing last ${MAX_DISPLAY_LOGS} of ${filtered.length} requests. Use filters to narrow down.`;
+    logListContainer.appendChild(info);
+  }
+
   // Panggil callback jika diberikan
   if (callback) callback();
 
@@ -170,136 +233,37 @@ export function renderList(callback) {
   if (logs.length === 0) {
     statusText.textContent = 'Listening…';
   } else {
-    statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
+    const shown = displayLogs.length;
+    statusText.textContent = `Showing ${shown} of ${logs.length} (filtered ${filtered.length})`;
   }
 }
-
-// export function renderList(callback) {
-//   const filtered = filterLogs();
-//   countBadge.textContent = filtered.length;
-//   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
-
-//   // Group by hostname
-//   const groups = {};
-//   filtered.forEach(log => {
-//     let hostname = '';
-//     try {
-//       hostname = new URL(log.url).hostname;
-//     } catch {
-//       hostname = 'invalid';
-//     }
-//     if (!groups[hostname]) groups[hostname] = [];
-//     groups[hostname].push(log);
-//   });
-
-//   const sortedHostnames = Object.keys(groups).sort();
-
-//   logListContainer.innerHTML = '';
-//   sortedHostnames.forEach(hostname => {
-//     const groupLogs = groups[hostname];
-//     const groupDiv = document.createElement('div');
-//     groupDiv.className = 'log-group';
-
-//     // Header
-//     const header = document.createElement('div');
-//     header.className = 'group-header';
-//     header.innerHTML = `
-//       <span class="group-toggle">+ </span>
-//       <span class="group-name">🗂️ ${escapeHtml(hostname)}</span>
-//       <span class="group-count">(${groupLogs.length})</span>
-//     `;
-//     header.addEventListener('click', () => {
-//       const body = groupDiv.querySelector('.group-body');
-//       const toggle = header.querySelector('.group-toggle');
-//       const isExpanded = !body.classList.contains('collapsed');
-//       if (isExpanded) {
-//         body.classList.add('collapsed');
-//         toggle.textContent = '+  ';
-//         expandedGroups.delete(hostname);
-//       } else {
-//         body.classList.remove('collapsed');
-//         toggle.textContent = '-  ';
-//         expandedGroups.add(hostname);
-//       }
-//     });
-//     groupDiv.appendChild(header);
-
-//     // Body
-//     const body = document.createElement('div');
-//     body.className = 'group-body';
-//     if (expandedGroups.has(hostname)) {
-//       body.classList.remove('collapsed');
-//       header.querySelector('.group-toggle').textContent = '- ';
-//     } else {
-//       body.classList.add('collapsed');
-//       header.querySelector('.group-toggle').textContent = '+ ';
-//     }
-    
-//     groupLogs.forEach(log => {
-//       const realIdx = logs.indexOf(log);
-//       const entry = document.createElement('div');
-//       const sc = statusClass(log.status);
-//       entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
-//       if (log.note) entry.classList.add('has-note');
-//       const icon = getCategoryIcon(log.category);
-//       entry.innerHTML = `
-//         <span class="req-icon">${icon}</span>
-//         <span class="status ${sc}">${log.status}</span>
-//         <span class="method">${log.method || 'GET'}</span>
-//         <span class="url">${escapeHtml(log.url)}</span>
-//         ${log.note ? `<span class="note-icon">📝</span>` : ''}
-//         <span class="time">${log.time || ''}</span>
-//       `;
-//       entry.addEventListener('click', () => selectLog(realIdx));
-//       body.appendChild(entry);
-//     });
-//     groupDiv.appendChild(body);
-//     logListContainer.appendChild(groupDiv);
-//   });
-
-//   if (callback) callback();
-
-//   // console.log('CEK-calback =========>', callback? "Ada":"tak")
-
-//   if (logs.length === 0) {
-//     statusText.textContent = 'Listening…';
-//   } else {
-//     statusText.textContent = `Showing ${filtered.length} of ${logs.length}`;
-//   }
-// }
-
 
 // ── Select log ──
 export function selectLog(idx) {
   if (idx === null || idx >= logs.length) {
     setSelectedId(null);
-    // Tidak perlu setEditingId
     detailEmpty.style.display = 'block';
     detailContent.style.display = 'none';
     renderList();
     return;
   }
   setSelectedId(idx);
-  // editingId diabaikan – selalu mode edit
-  // setActiveTab('request'); // jangan dibuka.. Awas..
-  // setActiveSubTab('params');
   renderList();
   renderDetail(idx);
 }
 
 export function setLoading(isLoading) {
-
   if (isLoading) {
     container.hidden = false;
     bar.classList.add('indeterminate');
   } else {
     container.hidden = true;
     bar.classList.remove('indeterminate');
-    bar.style.width = '0%'; // reset
+    bar.style.width = '0%';
   }
 }
 
-// ── renderDetail (selalu dalam mode edit untuk request) ──
+// ── renderDetail (tidak diubah, hanya perbaikan error null di clearHighlight) ──
 export function renderDetail(idx) {
   const log = logs[idx];
   if (!log) {
@@ -339,26 +303,6 @@ export function renderDetail(idx) {
     <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
     <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>`;
   
-  // ── ACTIONS ──
-  // Di bagian actions, tambahkan:
-  // html += `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">`;
-  // html += `<button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
-  //   ${isSending ? '⏳ Sending...' : '▶ Send'}
-  // </button>`;
-  // if (isSending) {
-  //   html += `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>`;
-  // }
-  // html += `<button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>`;
-  // // Tambahkan input timeout
-  // html += `
-  //   <div style="display:inline-flex; align-items:center; gap:4px; margin-left:8px;">
-  //     <label style="font-size:12px; color:#888;">Timeout (ms):</label>
-  //     <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" 
-  //           style="width:80px; padding:4px; border:1px solid #ccc; border-radius:4px; background:var(--input-bg); color:var(--text-color);" />
-  //   </div>
-  // `;
-  // html += `</div>`;
-
   html += `
   <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
     <button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
@@ -455,14 +399,13 @@ export function renderDetail(idx) {
 
   detailContent.innerHTML = html;
 
-  // stickySearch.style.visibility = activeTab === 'response' ? 'visible' : 'hidden';
   stickySearch.hidden = activeTab !== 'response';
 
   // ── Event binding ──
   detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
     const tabName = this.dataset.tab;
     if (tabName && tabName !== activeTab) { setActiveTab(tabName); renderDetail(idx); }
-    stickySearch.style.visibility = activeTab === 'response'? 'visible':'hidden'
+    stickySearch.hidden = activeTab !== 'response';
   }));
   detailContent.querySelectorAll('.sub-tab').forEach(tab => tab.addEventListener('click', function(e) {
     const subTab = this.dataset.subtab;
@@ -500,8 +443,6 @@ export function renderDetail(idx) {
   const noteTextarea = document.getElementById('log-note');
   if (noteTextarea) noteTextarea.addEventListener('input', () => {
     logs[idx].note = noteTextarea.value;
-    // saveLogs();
-    // renderList();
   });
 
   // Selalu pasang event untuk subtab (update log saat input berubah)
@@ -517,136 +458,76 @@ export function renderDetail(idx) {
   let currentMatches = [];
   let currentMatchIndex = -1;
 
-  // ------------------------------------------------------------
-
   function debounce(fn, delay = 250) {
     let timer;
-
     return (...args) => {
       clearTimeout(timer);
       timer = setTimeout(() => fn(...args), delay);
     };
   }
 
-  // ------------------------------------------------------------
-
   function clearHighlight() {
+    if (!rbContent) return;
     rbContent.textContent = formattedText;
     currentMatches = [];
     currentMatchIndex = -1;
-    statusCount.textContent = '';
+    if (statusCount) statusCount.textContent = '';
   }
-
-  // ------------------------------------------------------------
 
   function updateHighlight(keyword) {
     keyword = keyword.trim();
-
-    // keyword sama → tidak usah render lagi
     if (keyword === currentKeyword) return;
-
     currentKeyword = keyword;
-
-    // kosong
     if (!keyword) {
       clearHighlight();
       return;
     }
-
-    // minimal 2 karakter
     if (keyword.length < 2) {
       clearHighlight();
       return;
     }
-
-    // keyword tidak ada → skip regex
     if (!formattedText.toLowerCase().includes(keyword.toLowerCase())) {
       clearHighlight();
       return;
     }
-
     requestAnimationFrame(() => {
-
+      if (!rbContent) return;
       rbContent.innerHTML = highlightText(formattedText, keyword);
-
-      currentMatches = [
-        ...rbContent.querySelectorAll('.highlight')
-      ];
-
+      currentMatches = [...rbContent.querySelectorAll('.highlight')];
       currentMatchIndex = -1;
-
       if (currentMatches.length === 0) {
-        statusCount.textContent = '';
+        if (statusCount) statusCount.textContent = '';
         return;
       }
-
-      statusCount.textContent = `${currentMatches.length} matches`;
-
+      if (statusCount) statusCount.textContent = `${currentMatches.length} matches`;
       currentMatchIndex = 0;
-
       currentMatches[0].classList.add('active');
-
-      // sengaja TIDAK scroll di sini
     });
   }
 
-  // ------------------------------------------------------------
-
   if (searchInputResp) {
-    searchInputResp.addEventListener(
-      'input',
-      debounce((e) => {
-        updateHighlight(e.target.value);
-      }, 250)
-    );
-
+    searchInputResp.addEventListener('input', debounce((e) => {
+      updateHighlight(e.target.value);
+    }, 250));
     searchInputResp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+      if (e.key === 'Enter') {
         e.preventDefault();
         gotoMatch(currentMatchIndex + 1);
       }
     });
-    
-    searchInputResp.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-
-      e.preventDefault();
-      gotoMatch(currentMatchIndex + (e.shiftKey ? -1 : 1));
-    });
   }
-
-  // ------------------------------------------------------------
 
   function gotoMatch(index) {
-
     if (!currentMatches.length) return;
-
     currentMatches[currentMatchIndex]?.classList.remove('active');
-
-    currentMatchIndex =
-      (index + currentMatches.length) % currentMatches.length;
-
+    currentMatchIndex = (index + currentMatches.length) % currentMatches.length;
     const el = currentMatches[currentMatchIndex];
-
     el.classList.add('active');
-
-    el.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
-    });
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  // ------------------------------------------------------------
-
-  prevBtnResp?.addEventListener('click', () => {
-    gotoMatch(currentMatchIndex - 1);
-  });
-
-  nextBtnResp?.addEventListener('click', () => {
-    gotoMatch(currentMatchIndex + 1);
-  });
-
-  // ------------------------------------------------------------
+  prevBtnResp?.addEventListener('click', () => gotoMatch(currentMatchIndex - 1));
+  nextBtnResp?.addEventListener('click', () => gotoMatch(currentMatchIndex + 1));
 
   clearHighlight();
 }
