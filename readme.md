@@ -20,12 +20,13 @@ Open Chrome DevTools, capture requests from the page you're testing, edit them, 
 
 Think **Burp-style request replay with a Postman-like UI**, built directly into your browser.
 
-![screenshot1](screenshot/brutu%202026-07-11%20at%2014.13.24.png)
+![screenshot1](screenshot/response-header.png)
 
-![screenshot1](screenshot/brutu%202026-07-11%20at%2014.13.35.png)
+![screenshot1](screenshot/request-header.png)
 
+![screenshot1](screenshot/request-body.png)
 
-[![Demo](preview.gif)](https://github.com/user-attachments/assets/ec35c36c-55e8-49ef-9a77-7fa610949520)
+[![Demo](preview.gif)](https://github.com/user-attachments/assets/74166d33-ee1f-4667-89a6-1c98f8ec1886)
 
 ## Features
 
