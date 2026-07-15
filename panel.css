@@ -2907,3 +2907,9 @@ body {
 .sub-group-body.collapsed {
   display: none;
 }
+
+/* .auth-indicator {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 14px;
+} */
