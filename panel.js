@@ -8,7 +8,7 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          divider, MAX_LOGS, loadTimeoutSetting} from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
-import { renderList, renderDetail, setLoading } from './modules/render.js';
+import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
 import { theme, setTheme, captureFilter } from './modules/state.js';
@@ -200,15 +200,15 @@ reloadBtn.addEventListener('click', () => {
 const tabId = chrome.devtools.inspectedWindow.tabId; // tersedia di DevTools
 
 // Pantau perubahan status tab
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tabId === chrome.devtools.inspectedWindow.tabId) {
-    if (changeInfo.status === 'loading') {
-      setLoading(true);
-    } else if (changeInfo.status === 'complete') {
-      setLoading(false);
-    }
-  }
-});
+// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+//   if (tabId === chrome.devtools.inspectedWindow.tabId) {
+//     if (changeInfo.status === 'loading') {
+//       setLoading(true);
+//     } else if (changeInfo.status === 'complete') {
+//       setLoading(false);
+//     }
+//   }
+// });
 
 function customConfirm(message) {
   return new Promise((resolve) => {

@@ -198,23 +198,19 @@ export function renderList(callback) {
         entry.className = `log-entry ${sc}${selectedId === realIdx ? ' active' : ''}`;
         if (log.note) entry.classList.add('has-note');
         entry.dataset.index = realIdx;
-        const icon = getCategoryIcon(log.category);
-        const authIndicator = log.hasAuth ? '🔐 ' : '';
-        const sensitiveIcon = log.hasSensitiveData ? '⚠️' : '';
 
         entry.innerHTML = `
-          <span class="req-icon">${icon}</span>
-          <span class="auth-indicator">${authIndicator}</span>
-          <span class="sensitive-indicator">${sensitiveIcon}</span>
+          <span class="req-icon">${getCategoryIcon(log.category)}</span>
+          ${log.hasAuth ? '<span class="auth-indicator">🔐</span>' : ''}
+          ${log.hasSensitiveData ? '<span class="sensitive-indicator">⚠️</span>' : ''}
           <span class="status ${sc}">${log.status}</span>
           <span class="method">${log.method || 'GET'}</span>
           <span class="url">${escapeHtml(log.url)}</span>
-          ${log.note ? `<span class="note-icon">📝</span>` : ''}
+          ${log.note ? '<span class="note-icon">📝</span>' : ''}
           <span class="time">${log.time || ''}</span>
         `;
+
         const authTitle = log.hasAuth ? '🔐 Authenticated' : '';
-        // const sensitiveTitle = log.hasSensitiveData ? '⚠️ Contains sensitive data' : '';
-        // entry.title = [authTitle, sensitiveTitle].filter(Boolean).join(' • ');
         const pii = log.sensitiveTypes?.pii?.length ? '👤 PII' : '';
         const secrets = log.sensitiveTypes?.secrets?.length ? '🔑 Secrets' : '';
         entry.title = [authTitle, pii, secrets].filter(Boolean).join(' • ');
@@ -242,12 +238,9 @@ export function renderList(callback) {
   if (callback) callback();
 
   // Update status text
-  if (logs.length === 0) {
-    statusText.textContent = 'Listening…';
-  } else {
-    const shown = displayLogs.length;
-    statusText.textContent = `Showing ${shown} of ${logs.length} (filtered ${filtered.length})`;
-  }
+  statusText.textContent = logs.length
+    ? `Showing ${displayLogs.length} of ${logs.length} (filtered ${filtered.length})`
+    : 'Listening…';
 }
 
 // ── Select log ──
@@ -264,16 +257,6 @@ export function selectLog(idx) {
   renderDetail(idx);
 }
 
-export function setLoading(isLoading) {
-  // if (isLoading) {
-  //   container.hidden = false;
-  //   bar.classList.add('indeterminate');
-  // } else {
-  //   container.hidden = true;
-  //   bar.classList.remove('indeterminate');
-  //   bar.style.width = '0%';
-  // }
-}
 
 // ── renderDetail (tidak diubah, hanya perbaikan error null di clearHighlight) ──
 export function renderDetail(idx) {
