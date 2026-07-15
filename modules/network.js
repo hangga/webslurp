@@ -241,8 +241,55 @@ export function startCapture() {
       return;
     }
 
+    let hasAuth = false;
+
     const reqHeaders = {};
-    request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
+    // request.request.headers.forEach(h => { reqHeaders[h.name] = h.value; });
+
+    request.request.headers.forEach(({ name, value }) => {
+      reqHeaders[name.toLowerCase()] = value;
+    });
+
+    const AUTH_HEADERS = [
+      'authorization',
+      'proxy-authorization',
+      'x-api-key',
+      'api-key',
+      'x-auth-token',
+      'x-access-token',
+      'x-csrf-token',
+      'x-xsrf-token'
+    ];
+
+    const AUTH_COOKIE_PATTERNS = [
+      'session',
+      'sessionid',
+      'sid',
+      'token',
+      'jwt',
+      'auth',
+      'access_token',
+      'refresh_token',
+      'connect.sid',
+      'jsessionid',
+      'phpsessid',
+      'asp.net_sessionid'
+    ];
+
+    hasAuth = AUTH_HEADERS.some(header => reqHeaders[header]);
+
+    if (!hasAuth && reqHeaders.cookie) {
+      const cookieNames = reqHeaders.cookie
+        .split(';')
+        .map(cookie => cookie.split('=', 1)[0].trim().toLowerCase());
+
+      hasAuth = cookieNames.some(name =>
+        AUTH_COOKIE_PATTERNS.some(pattern =>
+          name === pattern ||
+          name.includes(pattern)
+        )
+      );
+    }
 
     const queryParams = (request.request.queryString || [])
       .filter(({ name }) => name)
@@ -297,14 +344,14 @@ export function startCapture() {
       bodyRawType: bodyInfo.bodyRawType,
       category: category,
       formDataFields: [],
-      auth: { type: 'none' }
+      auth: { type: 'none' },
+      hasAuth: hasAuth, 
     };
 
     logs.unshift(log);
     if (logs.length > 200) logs.pop();
     await saveLogs();
-    console.log('log.responseBody.length =======> ', log.responseBody? log.responseBody.length : '');
-    console.log('logs.length =======> ', logs.length);
+    
     renderList();
 
     // if (selectedId === null) {

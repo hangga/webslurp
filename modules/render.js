@@ -199,8 +199,10 @@ export function renderList(callback) {
         if (log.note) entry.classList.add('has-note');
         entry.dataset.index = realIdx;
         const icon = getCategoryIcon(log.category);
+        const authIndicator = log.hasAuth ? '🔐 ' : '';
         entry.innerHTML = `
           <span class="req-icon">${icon}</span>
+          <span class="auth-indicator">${authIndicator}</span>
           <span class="status ${sc}">${log.status}</span>
           <span class="method">${log.method || 'GET'}</span>
           <span class="url">${escapeHtml(log.url)}</span>
