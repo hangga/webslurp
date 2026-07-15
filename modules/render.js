@@ -200,15 +200,25 @@ export function renderList(callback) {
         entry.dataset.index = realIdx;
         const icon = getCategoryIcon(log.category);
         const authIndicator = log.hasAuth ? '🔐 ' : '';
+        const sensitiveIcon = log.hasSensitiveData ? '⚠️' : '';
+
         entry.innerHTML = `
           <span class="req-icon">${icon}</span>
           <span class="auth-indicator">${authIndicator}</span>
+          <span class="sensitive-indicator">${sensitiveIcon}</span>
           <span class="status ${sc}">${log.status}</span>
           <span class="method">${log.method || 'GET'}</span>
           <span class="url">${escapeHtml(log.url)}</span>
           ${log.note ? `<span class="note-icon">📝</span>` : ''}
           <span class="time">${log.time || ''}</span>
         `;
+        const authTitle = log.hasAuth ? '🔐 Authenticated' : '';
+        // const sensitiveTitle = log.hasSensitiveData ? '⚠️ Contains sensitive data' : '';
+        // entry.title = [authTitle, sensitiveTitle].filter(Boolean).join(' • ');
+        const pii = log.sensitiveTypes?.pii?.length ? '👤 PII' : '';
+        const secrets = log.sensitiveTypes?.secrets?.length ? '🔑 Secrets' : '';
+        entry.title = [authTitle, pii, secrets].filter(Boolean).join(' • ');
+        
         subBody.appendChild(entry);
       });
 
@@ -386,9 +396,15 @@ export function renderDetail(idx) {
     html += `</div></div></div>`;
 
     const highlightedBody = highlightText(formattedText, '');
+
+    let sensitiveBadge = '';
+    if (log.hasSensitiveData) {
+      const types = [...log.sensitiveTypes.pii, ...log.sensitiveTypes.secrets];
+      sensitiveBadge = `<span class="sensitive-badge">⚠️ Sensitive: ${types.join(', ')}</span>`;
+    }
     
     html += `<div class="response-body">
-    <label>Response Body</label>
+    <label>Response Body${sensitiveBadge}</label>
       <div class="rb-content" id="response-body-content">${highlightedBody}</div>
     </div>`;
   } else {

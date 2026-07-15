@@ -4,6 +4,7 @@ import { logs, selectedId, sendingId, activeTab, setSendingId, setSelectedId, se
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs, saveSettings } from './storage.js';
 import { renderList, renderDetail } from './render.js';
+import { detectSensitiveData, detectAuth } from './security.js';
 
 // ── Helper deteksi tipe ──
 // ── Helper deteksi tipe ──
@@ -250,46 +251,24 @@ export function startCapture() {
       reqHeaders[name.toLowerCase()] = value;
     });
 
-    const AUTH_HEADERS = [
-      'authorization',
-      'proxy-authorization',
-      'x-api-key',
-      'api-key',
-      'x-auth-token',
-      'x-access-token',
-      'x-csrf-token',
-      'x-xsrf-token'
-    ];
+    const auth = detectAuth(reqHeaders);
 
-    const AUTH_COOKIE_PATTERNS = [
-      'session',
-      'sessionid',
-      'sid',
-      'token',
-      'jwt',
-      'auth',
-      'access_token',
-      'refresh_token',
-      'connect.sid',
-      'jsessionid',
-      'phpsessid',
-      'asp.net_sessionid'
-    ];
+    hasAuth = auth.hasAuth;
 
-    hasAuth = AUTH_HEADERS.some(header => reqHeaders[header]);
+    // hasAuth = AUTH_HEADERS.some(header => reqHeaders[header]);
 
-    if (!hasAuth && reqHeaders.cookie) {
-      const cookieNames = reqHeaders.cookie
-        .split(';')
-        .map(cookie => cookie.split('=', 1)[0].trim().toLowerCase());
+    // if (!hasAuth && reqHeaders.cookie) {
+    //   const cookieNames = reqHeaders.cookie
+    //     .split(';')
+    //     .map(cookie => cookie.split('=', 1)[0].trim().toLowerCase());
 
-      hasAuth = cookieNames.some(name =>
-        AUTH_COOKIE_PATTERNS.some(pattern =>
-          name === pattern ||
-          name.includes(pattern)
-        )
-      );
-    }
+    //   hasAuth = cookieNames.some(name =>
+    //     AUTH_COOKIE_PATTERNS.some(pattern =>
+    //       name === pattern ||
+    //       name.includes(pattern)
+    //     )
+    //   );
+    // }
 
     const queryParams = (request.request.queryString || [])
       .filter(({ name }) => name)
@@ -327,6 +306,8 @@ export function startCapture() {
       responseBody: responseBody
     });
 
+    const sensitive = detectSensitiveData(responseBody);
+
     const log = {
       time: new Date().toLocaleTimeString(),
       url: request.request.url,
@@ -345,7 +326,12 @@ export function startCapture() {
       category: category,
       formDataFields: [],
       auth: { type: 'none' },
-      hasAuth: hasAuth, 
+      hasAuth: hasAuth,
+      hasSensitiveData: sensitive.hasSensitiveData,
+      sensitiveTypes: {
+        pii: sensitive.pii.types,
+        secrets: sensitive.secrets.types
+      }
     };
 
     logs.unshift(log);
