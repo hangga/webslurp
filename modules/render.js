@@ -372,6 +372,7 @@ export function renderDetail(idx) {
 
   // Siapkan teks response yang sudah diformat (plain)
   const formattedText = log.response ? formatOutputPlain(log.response) : '';
+  let fullResponseText = ''; // akan diisi jika ada status
 
   // ── TABS ──
   html += `<div class="detail-tabs">
@@ -468,32 +469,45 @@ export function renderDetail(idx) {
     }
     
     const respHeaders = headersToArray(log.responseHeaders || {});
-    
-    // ── Response Headers (expandable) ──
-    html += `<div class="response-headers">
-      <label style="display:flex; cursor: pointer;" id="headers-toggle">
-        <span>Response Headers</span>        
-      </label>
-      <div class="rheaders-container" id="rheaders-container" >
-        <div class="rh-inner">`;
-    if (respHeaders.length) {
-      respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
-    } else {
-      html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
-    }
-    html += `</div></div></div>`;
 
-    const highlightedBody = highlightText(formattedText, '');
+    // --- Buat teks lengkap response (status + headers + body) ---
+    let statusLine = `HTTP/1.1 ${log.status} ${log.statusText || ''}`.trim();
+    let headersString = respHeaders.map(h => `${h.key}: ${h.value}`).join('\r\n');
+    fullResponseText = statusLine + '\r\n' + headersString + '\r\n\r\n' + formattedText;
 
+    // Hilangkan div.response-headers, langsung tampilkan satu area response
     let sensitiveBadge = '';
     if (log.hasSensitiveData) {
       const types = [...log.sensitiveTypes.pii, ...log.sensitiveTypes.secrets];
       sensitiveBadge = `<span class="sensitive-badge">⚠️ Sensitive: ${types.join(', ')}</span>`;
     }
     
+    // // ── Response Headers (expandable) ──
+    // html += `<div class="response-headers">
+    //   <label style="display:flex; cursor: pointer;" id="headers-toggle">
+    //     <span>Response Headers</span>        
+    //   </label>
+    //   <div class="rheaders-container" id="rheaders-container" >
+    //     <div class="rh-inner">`;
+    // if (respHeaders.length) {
+    //   respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
+    // } else {
+    //   html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
+    // }
+    // html += `</div></div></div>`;
+
+    const highlightedFull = highlightText(fullResponseText, '');
+    // const highlightedBody = highlightText(formattedText, '');
+
+    // let sensitiveBadge = '';
+    if (log.hasSensitiveData) {
+      const types = [...log.sensitiveTypes.pii, ...log.sensitiveTypes.secrets];
+      sensitiveBadge = `<span class="sensitive-badge">⚠️ Sensitive: ${types.join(', ')}</span>`;
+    }
+    
     html += `<div class="response-body">
-    <label>Response Body${sensitiveBadge}</label>
-      <div class="rb-content" id="response-body-content">${highlightedBody}</div>
+    <label>Response</label>
+      <div class="rb-content" id="response-body-content">${highlightedFull}</div>
     </div>`;
   } else {
     html += `<div style="color:#666;padding:20px 0;text-align:center;font-style:italic;">No response yet</div>`;
@@ -574,7 +588,8 @@ export function renderDetail(idx) {
 
   function clearHighlight() {
     if (!rbContent) return;
-    rbContent.textContent = formattedText;
+    // rbContent.textContent = formattedText;
+    rbContent.textContent = fullResponseText;  // ← menggunakan fullResponseText
     currentMatches = [];
     currentMatchIndex = -1;
     if (statusCount) statusCount.textContent = '';
@@ -592,13 +607,13 @@ export function renderDetail(idx) {
       clearHighlight();
       return;
     }
-    if (!formattedText.toLowerCase().includes(keyword.toLowerCase())) {
+    if (!fullResponseText.toLowerCase().includes(keyword.toLowerCase())) {
       clearHighlight();
       return;
     }
     requestAnimationFrame(() => {
       if (!rbContent) return;
-      rbContent.innerHTML = highlightText(formattedText, keyword);
+      rbContent.innerHTML = highlightText(fullResponseText, keyword); // ← menggunakan fullResponseText
       currentMatches = [...rbContent.querySelectorAll('.highlight')];
       currentMatchIndex = -1;
       if (currentMatches.length === 0) {
@@ -610,6 +625,37 @@ export function renderDetail(idx) {
       currentMatches[0].classList.add('active');
     });
   }
+
+  // function updateHighlight(keyword) {
+  //   keyword = keyword.trim();
+  //   if (keyword === currentKeyword) return;
+  //   currentKeyword = keyword;
+  //   if (!keyword) {
+  //     clearHighlight();
+  //     return;
+  //   }
+  //   if (keyword.length < 2) {
+  //     clearHighlight();
+  //     return;
+  //   }
+  //   if (!formattedText.toLowerCase().includes(keyword.toLowerCase())) {
+  //     clearHighlight();
+  //     return;
+  //   }
+  //   requestAnimationFrame(() => {
+  //     if (!rbContent) return;
+  //     rbContent.innerHTML = highlightText(formattedText, keyword);
+  //     currentMatches = [...rbContent.querySelectorAll('.highlight')];
+  //     currentMatchIndex = -1;
+  //     if (currentMatches.length === 0) {
+  //       if (statusCount) statusCount.textContent = '';
+  //       return;
+  //     }
+  //     if (statusCount) statusCount.textContent = `${currentMatches.length} matches`;
+  //     currentMatchIndex = 0;
+  //     currentMatches[0].classList.add('active');
+  //   });
+  // }
 
   if (searchInputResp) {
     searchInputResp.addEventListener('input', debounce((e) => {
