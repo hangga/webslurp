@@ -11,6 +11,7 @@ import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
 import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
+import { scanRCE } from './rceScanner.js';
 
 const container = document.getElementById('progress-container');
 const bar = document.getElementById('progress-bar');
@@ -456,8 +457,6 @@ export function renderDetail(idx) {
       html += `<div class="security-warning-box">`;
       html += `<div class="sw-title">🛡️ Security Summary</div>`;
       combinedSecurity.all.forEach(f => {
-        console.log('CEK-saveritynya ===========> ', f.severity);
-        console.log('CEK-saveritynya ===========> ', f.severity.toLowerCase());
         html += `<div class="sw-item">
                   <span>${f.icon || '⚠️'}</span>
                   <span>${escapeHtml(f.message)}</span>
@@ -471,6 +470,7 @@ export function renderDetail(idx) {
     
     // ── Response Headers (expandable) ──
     html += `<div class="response-headers">
+      <button class="btn btn-scan" id="action-analyze">🔍 Analyze RCE</button> <br/><br/>
       <label style="display:flex; cursor: pointer;" id="headers-toggle">
         <span>Response Headers</span>        
       </label>
@@ -529,6 +529,73 @@ export function renderDetail(idx) {
   // Tombol Copy cURL
   const copyBtn = detailContent.querySelector('#action-copy');
   if (copyBtn) copyBtn.addEventListener('click', () => copyAsCurl(idx));
+
+  // Di dalam renderDetail, setelah detailContent.innerHTML = html;
+
+  // ── Tombol Scan RCE ─────────────────────────────────────────
+  const analyzeBtn = detailContent.querySelector('#action-analyze');
+  if (analyzeBtn) {
+    // State scan lokal (disimpan di closure)
+    let isScanning = false;
+    let abortController = null;
+
+    analyzeBtn.addEventListener('click', async () => {
+      const log = logs[idx];
+      if (!log) return;
+
+      // Jika sedang scanning → cancel
+      if (isScanning && abortController) {
+        abortController.abort();
+        abortController = null;
+        isScanning = false;
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = '🔍 Analyze RCE';
+        statusText.textContent = 'Analyze cancelled';
+        return;
+      }
+
+      // Mulai scan baru
+      isScanning = true;
+      abortController = new AbortController();
+      // analyzeBtn.disabled = true;
+      analyzeBtn.textContent = '⏳ Cancel';
+
+      statusText.textContent = 'Initializing...';
+
+      try {
+        // const { scanRCE } = await import('./modules/rceScanner.js');
+        const result = await scanRCE(
+          log,
+          (progress) => {
+            // Update status text dengan progress
+            const stageLabel = progress.stage === 'output' ? 'Output' : 'Time';
+            statusText.textContent =
+              `[${stageLabel}] Testing ${progress.parameter} (${progress.location}) ` +
+              `- ${progress.payload} [${progress.encoding}] (${progress.os})`;
+          },
+          abortController.signal // Kirim signal untuk cancel
+        );
+
+        // Tampilkan hasil
+        showRCEResult(result, analyzeBtn);
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          statusText.textContent = 'Analyze cancelled by user';
+        } else {
+          alert('Analyze error: ' + err.message);
+          statusText.textContent = 'Analyze error: ' + err.message;
+        }
+      } finally {
+        isScanning = false;
+        abortController = null;
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = '🔍 Analyze RCE';
+        if (!statusText.textContent.includes('cancelled') && !statusText.textContent.includes('error')) {
+          statusText.textContent = 'Analyze completed';
+        }
+      }
+    });
+  }
 
   const timeoutInput = document.getElementById('timeout-input');
   if (timeoutInput) {
@@ -695,4 +762,32 @@ export function renderBodySubtab(log) {
   let html = `<div class="sub-panel ${activeSubTab === 'body' ? 'active' : ''}" data-subpanel="body">
   <div class="body-textarea-row"><textarea id="edit-body" rows="6">${bodyToJson(log.requestBody) || ''}</textarea></div></div>`;
   return html;
+}
+
+function showRCEResult(result, btn) {
+  if (result.error) {
+    // alert('Scan error: ' + result.error);
+    statusText.textContent = 'Analyze error: ' + result.error;
+    return;
+  }
+  if (result.vulnerable) {
+    let msg = '⚠️ Potential RCE detected!\n\n';
+    result.details.forEach(d => {
+      msg += `Parameter: ${d.parameter} (${d.location})\n`;
+      msg += `Payload: ${d.payload}\n`;
+      msg += `Type: ${d.type} (${d.os})\n`;
+      if (d.type === 'output') {
+        msg += `Evidence: ${d.evidence}\n`;
+      } else {
+        msg += `Delay: ${d.delay}ms\n`;
+      }
+      msg += '\n';
+    });
+    // alert(msg);
+    statusText.textContent = msg
+    
+  } else {
+    // alert('No RCE vulnerability detected.');
+    statusText.textContent = 'No RCE vulnerability detected.';
+  }
 }

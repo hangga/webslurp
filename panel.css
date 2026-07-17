@@ -3007,3 +3007,96 @@ body {
 .security-warning-box.sw-info {
   border-left-color: #90caf9;
 }
+
+.btn-scan {
+  background: #f0ad4e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.btn-scan:hover {
+  background: #ec971f;
+}
+.btn-scan:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Scan Progress ── */
+#scan-progress {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  /* background: var(--bg-secondary, #f5f5f5); */
+  /* border-top: 1px solid var(--border-color, #ddd); */
+  /* border-bottom: 1px solid var(--border-color, #ddd); */
+  color: lime;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  margin: 8px 0 0 0;
+  /* border-radius: 4px; */
+}
+
+#scan-progress .spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color, #ccc);
+  border-top: 2px solid var(--accent, #007acc);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+#scan-progress .stage-label {
+  font-weight: 600;
+  color: var(--accent, #007acc);
+  background: var(--bg-accent, rgba(0,122,204,0.1));
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#scan-progress .param-name {
+  font-weight: 500;
+  color: var(--text-primary, #333);
+}
+
+#scan-progress .payload-detail {
+  color: var(--text-muted, #999);
+  font-size: 12px;
+}
+
+#scan-progress .os-badge {
+  display: inline-block;
+  background: var(--bg-badge, #e0e0e0);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary, #555);
+}
+
+#scan-progress.done {
+  background: var(--bg-success-light, #e8f5e9);
+  border-color: var(--success, #4caf50);
+  color: var(--success-text, #2e7d32);
+}
+
+#scan-progress.error {
+  background: var(--bg-error-light, #ffebee);
+  border-color: var(--error, #f44336);
+  color: var(--error-text, #c62828);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
