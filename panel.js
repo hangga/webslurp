@@ -4,7 +4,8 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          setActiveTab, setActiveSubTab, ignoreStorageChange, setIgnoreStorageChange,
          logListEl, detailEmpty, detailContent, searchInput, filterMethod,
          filterStatus, 
-         countBadge, statusText, statusCount,
+        //  countBadge, 
+         statusText, statusCount,
          divider, MAX_LOGS, loadTimeoutSetting} from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
@@ -87,7 +88,8 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   await loadTimeoutSetting();
   startCapture();
   statusText.textContent = 'Listening…';
-  console.log('[WebSlurp] Panel siap, menunggu request...');
+  // console.log('[WebSlurp] Panel siap, menunggu request...');
+  document.getElementById('about-version-btn').textContent = 'v'+chrome.runtime.getManifest().version;
 })();
 
 // ── Tema ──
@@ -276,6 +278,43 @@ document.getElementById('import-btn')?.addEventListener('click', () => {
   };
   input.click();
 });
+
+// ── About Modal ──
+const aboutModal = document.getElementById('aboutModal');
+const aboutBtn = document.getElementById('about-btn');
+const aboutClose = document.getElementById('aboutCloseBtn');
+const aboutVersion = document.getElementById('about-version');
+
+
+if (aboutVersion) {
+  try {
+    const manifest = chrome.runtime.getManifest();
+    aboutVersion.textContent = manifest.version || '1.0.0';
+  } catch (_) {
+    aboutVersion.textContent = '1.0.0';
+  }
+}
+
+if (aboutBtn) {
+  aboutBtn.addEventListener('click', () => {
+    if (aboutModal) aboutModal.style.display = 'flex';
+  });
+}
+
+if (aboutClose) {
+  aboutClose.addEventListener('click', () => {
+    if (aboutModal) aboutModal.style.display = 'none';
+  });
+}
+
+if (aboutModal) {
+  // Tutup jika klik di luar konten
+  aboutModal.addEventListener('click', (e) => {
+    if (e.target === aboutModal) {
+      aboutModal.style.display = 'none';
+    }
+  });
+}
 
 // Panggil setelah DOM siap
 initCaptureFilter();

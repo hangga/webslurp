@@ -1,7 +1,9 @@
 // render.js
 import { logs, selectedId, sendingId, activeTab, activeSubTab,
          setSelectedId, setActiveTab, setActiveSubTab,
-         logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
+         logListContainer, detailEmpty, detailContent, 
+        //  countBadge,
+          statusText, statusCount,
          expandedGroups, toggleGroup,
          MAX_LOGS, timeoutMs, setOriginalLogSnapshot } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
@@ -148,7 +150,7 @@ export function renderList(callback) {
   initDelegation();
   
   const filtered = filterLogs();
-  countBadge.textContent = filtered.length;
+  // countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
 
   // Batasi jumlah log yang ditampilkan (ambil N terakhir)
