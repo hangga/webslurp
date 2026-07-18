@@ -1305,11 +1305,31 @@ body {
   width: auto;
   filter: brightness(0.9);
 }
+
 .actions {
   display: flex;
   gap: 8px;
   align-items: center;
   margin-left: auto;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+  height: 28px;
+  transition: background 0.15s, opacity 0.15s;
+  color: var(--text-primary);
+}
+.actions:hover {
+  background: var(--bg-hover);
+}
+.actions.primary {
+  background: var(--accent);
+  color: var(--text-white);
+}
+.actions.primary:hover {
+  background: var(--accent-hover);
 }
 
 .theme-picker {
@@ -1418,7 +1438,7 @@ body {
   color: var(--text-primary);
 }
 .btn {
-  padding: 4px 12px;
+  padding: 4px 10px;
   border: none;
   border-radius: 4px;
   font-weight: 500;
@@ -1442,6 +1462,7 @@ body {
 .btn:active {
   opacity: 0.7;
 }
+
 
 /* ── SEARCH BAR ── */
 #search-bar {
@@ -3009,4 +3030,96 @@ body {
 }
 .security-warning-box.sw-info {
   border-left-color: #90caf9;
+}
+
+/* ===== GITHUB SPONSOR BUTTON ===== */
+.btn-githubsponsor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 14px;
+  border-radius: 999px;
+
+  font-size: 0.82rem;
+  font-weight: 500;
+
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition);
+
+  background: #ea4aaa;
+  border: 1px solid #ea4aaa;
+  color: #fff;
+}
+
+.btn-githubsponsor:hover {
+    background: #c93a8f;
+    border-color: #c93a8f;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(234, 74, 170, 0.3);
+    color: #fff;
+}
+
+
+.btn-paypal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 14px;
+  border-radius: 999px;
+
+  font-size: 0.82rem;
+  font-weight: 500;
+
+  text-decoration: none;
+  cursor: pointer;
+
+  transition: var(--transition);
+
+  background: #003087;
+  border: 1px solid #003087;
+  color: #fff;
+}
+
+.btn-paypal:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-color: rgba(108, 92, 231, 0.3);
+}
+
+.btn-paypal:hover {
+  background: #002266;
+  border-color: #002266;
+}
+
+.btn-coffee {
+  background: #ff813f;
+  border-color: #ff813f;
+  color: #fff;
+}
+
+.btn-coffee:hover {
+  background: #e6732e;
+  border-color: #e6732e;
+}
+
+
+.about-footer {
+    margin-top: 16px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    flex-wrap: wrap;
+}
+
+.support-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
