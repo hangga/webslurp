@@ -6,7 +6,7 @@
 
 # WebSlurp
 
-![Version](https://img.shields.io/badge/version-1.4-blue)
+![Version](https://img.shields.io/badge/version-1.5-blue)
 ![Manifest](https://img.shields.io/badge/Manifest-V3-orange)
 ![Chrome](https://img.shields.io/badge/Chrome-DevTools-success)
 ![License](https://img.shields.io/badge/license-MIT-green)
