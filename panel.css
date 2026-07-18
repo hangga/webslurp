@@ -1796,6 +1796,9 @@ body {
   transition: background 0.1s;
   border-left: 2px solid transparent;
 }
+.log-entry.edit {
+  background: var(--bg-log-entry-hover);
+}
 .log-entry:hover {
   background: var(--bg-log-entry-hover);
 }

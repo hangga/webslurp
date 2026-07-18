@@ -1,6 +1,6 @@
 import { logs, selectedId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter,
           abortController, cancelRequested, timeoutId, timeoutMs,
-          setAbortController, setCancelRequested, setTimeoutId } from './state.js';
+          setAbortController, setCancelRequested, setTimeoutId, originalLogSnapshot, setOriginalLogSnapshot } from './state.js';
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs, saveSettings } from './storage.js';
 import { renderList, renderDetail } from './render.js';
@@ -510,7 +510,7 @@ export async function sendRequest(idx) {
 
   setSendingId(idx);
   delete logs[idx]?.sendStatus;
-  renderDetail(idx);
+  // renderDetail(idx);
 
   try {
     statusText.textContent = 'Sending…';
@@ -536,14 +536,26 @@ export async function sendRequest(idx) {
       sendStatus: response.ok ? 'success' : 'error',
       sendDuration: elapsed,
       mime: response.headers.get('content-type') || '',
+      isEdited: true,
     };
-    logs[idx] = newLog;
+    // logs[idx] = newLog;
+
+    // --- Kembalikan log asli ke snapshot (agar tidak berubah) ---
+    logs[idx] = structuredClone(originalLogSnapshot);
+
+    const newIdx = idx + 1;
+    logs.splice(newIdx, 0, newLog);
+    
+    await saveLogs();
+
+    setOriginalLogSnapshot(null); // clear snapshot
+
     await saveLogs();
     setSendingId(null);
-    setSelectedId(idx);
+    setSelectedId(newIdx);
     setActiveTab('response');
     renderList();
-    renderDetail(idx);
+    renderDetail(newIdx);
     statusText.textContent = `Sent (${response.status}) in ${elapsed}ms`;
   } catch (err) {
 

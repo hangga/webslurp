@@ -3,7 +3,7 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          setSelectedId, setActiveTab, setActiveSubTab,
          logListContainer, detailEmpty, detailContent, countBadge, statusText, statusCount,
          expandedGroups, toggleGroup,
-         MAX_LOGS, timeoutMs } from './state.js';
+         MAX_LOGS, timeoutMs, setOriginalLogSnapshot } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
         buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
         getBaseDomain, autoResizeTextarea } from './helpers.js';
@@ -259,21 +259,6 @@ export function renderList(callback) {
         // masih PR disini
         const securityFindings = log.securityFindings || [];
 
-
-        // const highestSeverity = securityFindings.reduce(
-        //   (highest, { severity }) =>
-        //     severityOrder.indexOf(severity) > severityOrder.indexOf(highest)
-        //       ? severity
-        //       : highest,
-        //   ''
-        // );
-
-        // const securityBadge = highestSeverity
-        //   ? `<span class="security-badge ${highestSeverity}" title="${escapeHtml(
-        //       securityFindings.map(({ message }) => message).join('\n')
-        //     )}">${severityIcons[highestSeverity] || '🛡️'}</span>`
-        //   : '';
-
         const combinedSecurity = getCombinedSecurityInfo(log);
         const highest = combinedSecurity.highest;
         const securityBadge = highest
@@ -354,6 +339,8 @@ export function renderDetail(idx) {
     detailContent.style.display = 'none';
     return;
   }
+
+  setOriginalLogSnapshot(structuredClone(log));
 
   detailEmpty.style.display = 'none';
   detailContent.style.display = 'flex';
@@ -457,8 +444,6 @@ export function renderDetail(idx) {
       html += `<div class="security-warning-box">`;
       html += `<div class="sw-title">🛡️ Security Summary</div>`;
       combinedSecurity.all.forEach(f => {
-        console.log('CEK-saveritynya ===========> ', f.severity);
-        console.log('CEK-saveritynya ===========> ', f.severity.toLowerCase());
         html += `<div class="sw-item">
                   <span>${f.icon || '⚠️'}</span>
                   <span>${escapeHtml(f.message)}</span>

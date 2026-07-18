@@ -7,6 +7,12 @@ export let activeSubTab = 'params';
 export const MAX_LOGS = 200;
 export let ignoreStorageChange = false;
 
+export let originalLogSnapshot = null;
+
+export function setOriginalLogSnapshot(snapshot) {
+  originalLogSnapshot = snapshot;
+}
+
 // ── Setters ──
 // export function setLogs(newLogs) { logs = newLogs; }
 export function setLogs(newLogs) {
