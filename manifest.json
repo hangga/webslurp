@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "WebSlurp",
   "description": "Inspect, modify & replay API requests",
-  "version": "1.6",
+  "version": "1.7",
   "permissions": [
     "storage",
     "unlimitedStorage",

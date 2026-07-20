@@ -652,7 +652,7 @@ export function detectSecrets(text) {
       const normalizedKey = normalizeKey(key);
       for (const pattern of sensitiveKeys) {
         if (pattern.regex.test(normalizedKey)) {
-          found.add(pattern.type);
+          found?.add?.(pattern.type);
           break;
         }
       }

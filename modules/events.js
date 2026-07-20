@@ -1,6 +1,6 @@
 // events.js
 import { logs, selectedId, activeSubTab, setActiveSubTab, statusText } from './state.js';
-import { escapeHtml, headersToObject, buildUrlWithParams } from './helpers.js';
+import { escapeHtml, headersToObject, buildUrlWithParams, parseMultipartFormData } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderDetail } from './render.js';
 
@@ -108,6 +108,36 @@ export function setupDetailDelegation() {
         updateUrlencodedFromUI(log);
       }
       return;
+    }
+  });
+
+  // events.js – tambahkan di dalam setupDetailDelegation, setelah listener click
+
+  // Delegasi untuk perubahan type (text/file)
+  detailContent.addEventListener('change', function(e) {
+    const target = e.target;
+    if (target.classList.contains('form-type')) {
+      const row = target.closest('.form-row');
+      if (!row) return;
+      const isFile = target.value === 'file';
+      const valueContainer = row.querySelector('.fvalue');
+      const existingInput = valueContainer.querySelector('input');
+      if (isFile) {
+        // Ganti dengan input file
+        const fileInput = document.createElement('input');
+        fileInput.className = 'form-file';
+        fileInput.type = 'file';
+        valueContainer.replaceChild(fileInput, existingInput);
+      } else {
+        // Ganti dengan input text
+        const textInput = document.createElement('input');
+        textInput.className = 'form-text';
+        textInput.placeholder = 'Value';
+        textInput.value = existingInput.value || '';
+        valueContainer.replaceChild(textInput, existingInput);
+      }
+      // Update log
+      updateFormFieldsFromUI(log);
     }
   });
 
@@ -320,6 +350,46 @@ export function attachSubtabEvents(idx) {
       });
     }
   }
+
+  // events.js – di dalam attachSubtabEvents, setelah elemen body textarea
+
+  // ── Body Mode (radio) ──
+  const radioButtons = document.querySelectorAll('input[name="body-mode"]');
+  radioButtons.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (!this.checked) return;
+      const newMode = this.value;
+      log.bodyMode = newMode;
+      // Jika pindah ke form-data dan field kosong, coba parse dari raw body
+      if (newMode === 'form-data' && log.formDataFields.length === 0 && log.requestBody) {
+        const contentType = log.requestHeaders?.['content-type'] || log.requestHeaders?.['Content-Type'] || '';
+        const boundaryMatch = contentType.match(/boundary=([^;]+)/);
+        if (boundaryMatch) {
+          const boundary = boundaryMatch[1].trim();
+          const parsed = parseMultipartFormData(log.requestBody, boundary);
+          if (parsed.length) {
+            log.formDataFields = parsed;
+          }
+        }
+      }
+      // Jika pindah ke x-www-form-urlencoded dan field kosong, coba parse dari raw body
+      if (newMode === 'x-www-form-urlencoded' && log.formDataFields.length === 0 && log.requestBody) {
+        try {
+          const params = new URLSearchParams(log.requestBody);
+          const fields = [];
+          for (const [key, value] of params) {
+            fields.push({ key, value });
+          }
+          log.formDataFields = fields;
+        } catch (_) {}
+      }
+      // Jika pindah ke raw, set requestBody dari form data? optional
+      saveLogs();
+      renderDetail(idx);
+    });
+  });
+
+  // ── Event delegation untuk field (sudah ada di setupDetailDelegation, pastikan diaktifkan) ──
 
   // ── Auth ──
   const authType = document.getElementById('auth-type');
