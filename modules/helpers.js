@@ -401,3 +401,169 @@ export async function getLatestVersion() {
     return null;
   }
 }
+
+// helpers.js – tambahkan di bagian bawah
+
+// /**
+//  * Parse multipart/form-data body string menjadi array field.
+//  * @param {string} body - Raw multipart body
+//  * @param {string} boundary - Boundary string (dari Content-Type)
+//  * @returns {Array<{key: string, value: string, type: 'text'|'file', filename?: string}>}
+//  */
+// export function parseMultipartFormData(body, boundary) {
+//   const fields = [];
+//   if (!body || !boundary) return fields;
+
+//   // Boundary biasanya sudah termasuk '--' di awal, tapi kita pastikan
+//   const cleanBoundary = boundary.replace(/^--/, '');
+//   const delimiter = `--${cleanBoundary}`;
+//   const closeDelimiter = `--${cleanBoundary}--`;
+
+//   // Split berdasarkan delimiter
+//   const parts = body.split(delimiter).filter(part => part.trim() && part !== '--');
+
+//   for (const part of parts) {
+//     // Jika part adalah penutup, skip
+//     if (part.trim() === '--') continue;
+
+//     // Pisahkan headers dan content
+//     const [headerBlock, ...contentParts] = part.split('\r\n\r\n');
+//     const content = contentParts.join('\r\n\r\n').replace(/\r\n$/, ''); // hapus trailing CRLF
+
+//     // Parse headers
+//     const headers = {};
+//     const headerLines = headerBlock.split('\r\n');
+//     for (const line of headerLines) {
+//       const [key, ...vals] = line.split(':');
+//       if (key && vals.length) {
+//         headers[key.trim().toLowerCase()] = vals.join(':').trim();
+//       }
+//     }
+
+//     // Ambil content-disposition
+//     const disposition = headers['content-disposition'] || '';
+//     const nameMatch = disposition.match(/name="([^"]+)"/);
+//     const filenameMatch = disposition.match(/filename="([^"]+)"/);
+
+//     if (!nameMatch) continue;
+
+//     const key = nameMatch[1];
+//     const filename = filenameMatch ? filenameMatch[1] : null;
+
+//     if (filename) {
+//       // File
+//       fields.push({
+//         key,
+//         value: filename,
+//         type: 'file',
+//         fileContent: content, // optional, bisa disimpan jika perlu
+//         filename
+//       });
+//     } else {
+//       // Text
+//       fields.push({
+//         key,
+//         value: content,
+//         type: 'text'
+//       });
+//     }
+//   }
+
+//   return fields;
+// }
+
+/**
+ * Parse multipart/form-data from Chrome DevTools postData.
+ *
+ * @param {Object} postData
+ * @param {string} postData.mimeType
+ * @param {string} postData.text
+ * @param {Array<{name:string,value:string}>} postData.params
+ *
+ * @returns {Array<{
+ *   key: string,
+ *   value: string,
+ *   type: 'text'|'file',
+ *   filename?: string,
+ *   contentType?: string
+ * }>}
+ */
+export function parseMultipartFormData(postData) {
+    if (!postData || !Array.isArray(postData.params)) {
+        return [];
+    }
+
+    const text = postData.text || "";
+    const metadata = new Map();
+
+    // ----------------------------------------------------
+    // Parse metadata (filename + content-type) dari raw body
+    // ----------------------------------------------------
+    if (text) {
+
+        const boundaryMatch = postData.mimeType?.match(/boundary=([^;]+)/i);
+
+        if (boundaryMatch) {
+
+            const boundary = boundaryMatch[1];
+            const delimiter = `--${boundary}`;
+
+            const parts = text
+                .split(delimiter)
+                .slice(1, -1);
+
+            for (let part of parts) {
+
+                part = part.trim();
+
+                if (!part) continue;
+
+                const idx = part.indexOf("\r\n\r\n");
+
+                if (idx === -1) continue;
+
+                const headerBlock = part.substring(0, idx);
+
+                const disposition =
+                    headerBlock.match(/Content-Disposition:\s*([^\r\n]+)/i)?.[1];
+
+                if (!disposition) continue;
+
+                const name =
+                    disposition.match(/name="([^"]+)"/i)?.[1];
+
+                if (!name) continue;
+
+                const filename =
+                    disposition.match(/filename="([^"]*)"/i)?.[1];
+
+                const contentType =
+                    headerBlock.match(/Content-Type:\s*([^\r\n]+)/i)?.[1];
+
+                if (filename || contentType) {
+                    metadata.set(name, {
+                        filename,
+                        contentType
+                    });
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------
+    // Merge params + metadata
+    // ----------------------------------------------------
+    return postData.params.map(param => {
+
+        const meta = metadata.get(param.name);
+
+        return {
+            key: param.name,
+            value: param.value,
+            type: meta ? "file" : "text",
+            filename: meta?.filename,
+            contentType: meta?.contentType
+        };
+
+    });
+}

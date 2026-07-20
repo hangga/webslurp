@@ -8,7 +8,7 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          MAX_LOGS, timeoutMs, setOriginalLogSnapshot } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
         buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
-        getBaseDomain, autoResizeTextarea } from './helpers.js';
+        getBaseDomain, autoResizeTextarea, parseMultipartFormData } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -724,8 +724,124 @@ export function renderHeadersSubtab(log) {
   return html;
 }
 
+// export function renderBodySubtab(log) {
+//   let html = `<div class="sub-panel ${activeSubTab === 'body' ? 'active' : ''}" data-subpanel="body">
+//   <div class="body-textarea-row"><textarea id="edit-body" rows="6">${bodyToJson(log.requestBody) || ''}</textarea></div></div>`;
+//   return html;
+// }
+
+// render.js – replace renderBodySubtab
+
 export function renderBodySubtab(log) {
+  // Tentukan bodyMode default jika belum ada
+  if (!log.bodyMode) log.bodyMode = 'none';
+  if (!log.formDataFields) log.formDataFields = [];
+  if (!log.bodyRawType) log.bodyRawType = 'text';
+
+  // Jika bodyMode === 'form-data' dan formDataFields kosong, coba parse dari requestBody
+  if (log.bodyMode === 'form-data' && log.formDataFields.length === 0 && log.requestBody) {
+    // Cari boundary dari requestHeaders
+    const contentType = log.requestHeaders?.['content-type'] || log.requestHeaders?.['Content-Type'] || '';
+    const boundaryMatch = contentType.match(/boundary=([^;]+)/);
+    if (boundaryMatch) {
+      const parsed = parseMultipartFormData(log.requestBody);
+      if (parsed.length) {
+        log.formDataFields = parsed;
+        // Juga simpan raw body untuk fallback
+      }
+    }
+    // Jika gagal parse, tetap kosong
+  }
+
+  // Build HTML untuk radio
+  const modes = ['none', 'form-data', 'x-www-form-urlencoded', 'raw'];
   let html = `<div class="sub-panel ${activeSubTab === 'body' ? 'active' : ''}" data-subpanel="body">
-  <div class="body-textarea-row"><textarea id="edit-body" rows="6">${bodyToJson(log.requestBody) || ''}</textarea></div></div>`;
+    <div class="body-mode-radios">
+      ${modes.map(m => `
+        <label class="body-radio-label">
+          <input type="radio" name="body-mode" value="${m}" ${log.bodyMode === m ? 'checked' : ''}>
+          ${m === 'none' ? 'None' : m === 'form-data' ? 'Form Data' : m === 'x-www-form-urlencoded' ? 'URL Encoded' : 'Raw'}
+        </label>
+      `).join('')}
+    </div>
+    <div class="body-mode-content">`;
+
+  // console.log('CEK-BODY =======> ', log.requestBody);
+
+  // Konten sesuai mode
+  if (log.bodyMode === 'form-data') {
+    html += renderFormDataFields(log);
+  } else if (log.bodyMode === 'x-www-form-urlencoded') {
+    html += renderUrlEncodedFields(log);
+  } else if (log.bodyMode === 'raw') {
+    html += `
+    <div class="body-textarea-row">
+      <textarea id="edit-body" rows="6">${bodyToJson(log.requestBody || '')}</textarea>
+    </div>`;
+  } else {
+    // none
+    html += `<div class="body-none-hint">No body will be sent.</div>`;
+  }
+
+  html += `</div></div>`;
+  return html;
+}
+
+// Fungsi bantu render Form Data fields
+function renderFormDataFields(log) {
+  const fields = log.formDataFields || [];
+  if (fields.length === 0) {
+    // Tambahkan satu baris kosong sebagai default
+    fields.push({ key: '', value: '', type: 'text' });
+  }
+  let html = `<div class="form-data-fields">
+    <div class="form-row header-row">
+      <span class="fkey">Key</span>
+      <span class="ftype">Type</span>
+      <span class="fvalue">Value / File</span>
+      <span class="faction"></span>
+    </div>`;
+  fields.forEach((f, i) => {
+    const isFile = f.type === 'file';
+    console.log('CEK-TYPE ========>', f);
+    
+    html += `<div class="form-row" data-findex="${i}">
+      <div class="fkey"><input class="form-key" value="${escapeHtml(f.key)}" placeholder="Key" /></div>
+      <div class="ftype">
+        <select class="form-type">
+          <option value="text" ${!isFile ? 'selected' : ''}>Text</option>
+          <option value="file" ${isFile ? 'selected' : ''}>File</option>
+        </select>
+      </div>
+      <div class="fvalue">
+        ${isFile ? `<input class="form-file" type="file" />` : `<input class="form-text" value="${escapeHtml(f.value)}" placeholder="Value" />`}
+      </div>
+      <div class="faction"><button class="form-remove" data-findex="${i}" ${fields.length === 1 ? 'disabled' : ''}>×</button></div>
+    </div>`;
+  });
+  html += `<button class="form-add">+ Add Field</button></div>`;
+  return html;
+}
+
+// Fungsi bantu render URL Encoded fields
+function renderUrlEncodedFields(log) {
+  const fields = log.formDataFields || [];
+  if (fields.length === 0) {
+    fields.push({ key: '', value: '' });
+  }
+  let html = `<div class="urlencoded-fields">
+    <div class="urlencoded-row header-row">
+      <span class="ukey">Key</span>
+      <span class="uvalue">Value</span>
+      <span class="uaction"></span>
+    </div>`;
+  fields.forEach((f, i) => {
+    html += `<div class="urlencoded-row" data-uindex="${i}">
+      <div class="ukey"><input class="urlencoded-key" value="${escapeHtml(f.key)}" placeholder="Key" /></div>
+      <div class="uvalue"><input class="urlencoded-value" value="${escapeHtml(f.value)}" placeholder="Value" /></div>
+      <div class="uaction"><button class="urlencoded-remove" data-uindex="${i}" ${fields.length === 1 ? 'disabled' : ''}>×</button></div>
+    </div>`;
+  });
+  html += `<button class="urlencoded-add">+ Add Field</button></div>`;
   return html;
 }

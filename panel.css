@@ -3123,3 +3123,61 @@ body {
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* ── BODY MODE RADIO ── */
+.body-mode-radios {
+  display: inline-flex;
+  gap: 6px;
+  padding: 3px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+}
+
+.body-radio-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  padding: 6px 12px;
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background .15s ease,
+    color .15s ease,
+    border-color .15s ease;
+}
+
+.body-radio-label:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.body-radio-label input {
+  position: absolute;
+  opacity: 0;
+}
+
+.body-radio-label:has(input:checked) {
+  background: var(--accent);
+  color: var(--text-white);
+}
+
+.body-radio-label:has(input:checked):hover {
+  background: var(--accent-hover);
+}
+
+.body-mode-content {
+  margin-top: 10px;
+}
+
+.body-none-hint {
+  padding: 8px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
