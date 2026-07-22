@@ -1,7 +1,5 @@
-# WebSlurp
-
 <p align="center">
-  <img src="logo-512.png" width="50" alt="WebSlurp Logo">
+  <img src="logo-512.png" width="100" alt="WebSlurp Logo">
 </p>
 
 # WebSlurp
