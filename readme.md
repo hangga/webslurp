@@ -1,7 +1,7 @@
 # WebSlurp
 
 <p align="center">
-  <img src="logo-512.png" width="320" alt="WebSlurp Logo">
+  <img src="logo-512.png" width="50" alt="WebSlurp Logo">
 </p>
 
 # WebSlurp
@@ -14,13 +14,13 @@
 
 **Capture. Edit. Replay. Right inside Chrome DevTools.**
 
-WebSlurp is a lightweight alternative for the capture-and-replay workflow you might use Burp Suite for — without setting up a proxy.
+WebSlurp lets you capture network requests directly from Chrome DevTools, edit them, and replay them instantly — no proxy setup, no switching between tools.
 
-Open Chrome DevTools, capture requests from the page you're testing, edit them, and replay instantly.
+It's the fastest way to inspect and replay HTTP requests when testing web applications and APIs.
 
-Think **Burp-style request replay with a Postman-like UI**, built directly into your browser.
+Think **Burp-style request replay with a Postman-like interface**, built right into your browser.
 
-![screenshot1](screenshot/request-body.png)
+![screenshot1](screenshot/request.png)
 
 ![screenshot1](screenshot/params.png)
 
