@@ -1,15 +1,13 @@
 // render.js
-import { logs, selectedId, sendingId, activeTab, activeSubTab,
-         setSelectedId, setActiveTab, setActiveSubTab,
-         logListContainer, detailEmpty, detailContent, 
-        //  countBadge,
-          statusText, statusCount,
-         expandedGroups, toggleGroup,
-         MAX_LOGS, timeoutMs, setOriginalLogSnapshot } from './state.js';
+import { logs, selectedId, sendingId, activeTab, activeSubTab, setSelectedId, setActiveTab, 
+        setActiveSubTab, logListContainer, detailEmpty, detailContent, statusText, statusCount, 
+        expandedGroups, toggleGroup, MAX_LOGS, timeoutMs, setOriginalLogSnapshot } 
+        from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
         buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
-        getBaseDomain, autoResizeTextarea, parseMultipartFormData, getEndpoint } from './helpers.js';
-import { saveLogs } from './storage.js';
+        getBaseDomain, autoResizeTextarea, parseMultipartFormData, getEndpoint } 
+        from './helpers.js';
+// import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
 import { sendRequest, copyAsCurl, cancelRequest } from './network.js';
@@ -270,13 +268,10 @@ export function renderList(callback) {
               </span>`
           : '';
 
-            // ${securityBadge}
-            //${log.hasSensitiveData ? '<span class="sensitive-indicator">⚠️</span>' : ''}
         entry.innerHTML = `
           ${securityBadge? securityBadge :''}
           <span class="req-icon">${getCategoryIcon(log.category)}</span>
           ${log.hasAuth ? '<span class="auth-indicator">🔐</span>' : ''}
-          
           <span class="status ${sc}">${log.status}</span>
           <span class="method">${log.method || 'GET'}</span>
           <span class="url">${escapeHtml(getEndpoint(log.url))}</span>
@@ -331,7 +326,6 @@ export function selectLog(idx) {
   renderList();
   renderDetail(idx);
 }
-
 
 // ── renderDetail (tidak diubah, hanya perbaikan error null di clearHighlight) ──
 export function renderDetail(idx) {
@@ -471,23 +465,8 @@ export function renderDetail(idx) {
       const types = [...log.sensitiveTypes.pii, ...log.sensitiveTypes.secrets];
       sensitiveBadge = `<span class="sensitive-badge">⚠️ Sensitive: ${types.join(', ')}</span>`;
     }
-    
-    // // ── Response Headers (expandable) ──
-    // html += `<div class="response-headers">
-    //   <label style="display:flex; cursor: pointer;" id="headers-toggle">
-    //     <span>Response Headers</span>        
-    //   </label>
-    //   <div class="rheaders-container" id="rheaders-container" >
-    //     <div class="rh-inner">`;
-    // if (respHeaders.length) {
-    //   respHeaders.forEach(h => html += `<div class="rh-row"><span class="rh-key">${escapeHtml(h.key)}</span><span class="rh-value">${escapeHtml(h.value)}</span></div>`);
-    // } else {
-    //   html += `<div style="padding:6px 10px;color:#666;font-style:italic;">(no headers)</div>`;
-    // }
-    // html += `</div></div></div>`;
-
+  
     const highlightedFull = highlightText(fullResponseText, '');
-    // const highlightedBody = highlightText(formattedText, '');
 
     // let sensitiveBadge = '';
     if (log.hasSensitiveData) {
@@ -533,36 +512,6 @@ export function renderDetail(idx) {
   // Tombol Copy cURL
   const copyBtn = detailContent.querySelector('#action-copy');
   if (copyBtn) copyBtn.addEventListener('click', () => copyAsCurl(idx));
-
-  const timeoutInput = document.getElementById('timeout-input');
-  if (timeoutInput) {
-    timeoutInput.addEventListener('change', function() {
-      const val = parseInt(this.value, 10);
-      if (!isNaN(val) && val >= 1000) {
-        import('./network.js').then(module => {
-          module.updateTimeout(val);
-        });
-      } else {
-        this.value = timeoutMs; // revert
-        statusText.textContent = 'Invalid timeout';
-      }
-    });
-  }
-
-  console.log('CEK LOG =========> ', log.note || '');
-
-  // Note
-  const noteTextarea = document.getElementById('log-note-sidebar');
-  if (noteTextarea) {
-    noteTextarea.value = log.note || '';
-    noteTextarea.addEventListener('input', () => {
-      logs[idx].note = noteTextarea.value;
-      saveLogs();
-    });
-  }
-  // if (noteTextarea) noteTextarea.addEventListener('input', () => {
-  //   logs[idx].note = noteTextarea.value;
-  // });
 
   // Selalu pasang event untuk subtab (update log saat input berubah)
   attachSubtabEvents(idx);
@@ -624,37 +573,6 @@ export function renderDetail(idx) {
       currentMatches[0].classList.add('active');
     });
   }
-
-  // function updateHighlight(keyword) {
-  //   keyword = keyword.trim();
-  //   if (keyword === currentKeyword) return;
-  //   currentKeyword = keyword;
-  //   if (!keyword) {
-  //     clearHighlight();
-  //     return;
-  //   }
-  //   if (keyword.length < 2) {
-  //     clearHighlight();
-  //     return;
-  //   }
-  //   if (!formattedText.toLowerCase().includes(keyword.toLowerCase())) {
-  //     clearHighlight();
-  //     return;
-  //   }
-  //   requestAnimationFrame(() => {
-  //     if (!rbContent) return;
-  //     rbContent.innerHTML = highlightText(formattedText, keyword);
-  //     currentMatches = [...rbContent.querySelectorAll('.highlight')];
-  //     currentMatchIndex = -1;
-  //     if (currentMatches.length === 0) {
-  //       if (statusCount) statusCount.textContent = '';
-  //       return;
-  //     }
-  //     if (statusCount) statusCount.textContent = `${currentMatches.length} matches`;
-  //     currentMatchIndex = 0;
-  //     currentMatches[0].classList.add('active');
-  //   });
-  // }
 
   if (searchInputResp) {
     searchInputResp.addEventListener('input', debounce((e) => {
@@ -736,13 +654,6 @@ export function renderHeadersSubtab(log) {
   return html;
 }
 
-// export function renderBodySubtab(log) {
-//   let html = `<div class="sub-panel ${activeSubTab === 'body' ? 'active' : ''}" data-subpanel="body">
-//   <div class="body-textarea-row"><textarea id="edit-body" rows="6">${bodyToJson(log.requestBody) || ''}</textarea></div></div>`;
-//   return html;
-// }
-
-// render.js – replace renderBodySubtab
 
 export function renderBodySubtab(log) {
   // Tentukan bodyMode default jika belum ada

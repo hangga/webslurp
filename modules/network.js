@@ -257,8 +257,6 @@ export function startCapture() {
 
     const postData = request.request.postData || '';
 
-    console.log('POST-DATA ===========> ', postData);
-
     let responseBody = '';
     try {
       const content = await new Promise((resolve) => {
