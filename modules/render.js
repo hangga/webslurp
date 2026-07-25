@@ -362,7 +362,9 @@ export function renderDetail(idx) {
     <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
     <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
     <div class="detail-tabs-actions">
-      <button id="notes-toggle-detail" class="notes-toggle-btn" title="Toggle notes panel">📝</button>
+      <button id="notes-toggle-detail" class="notes-toggle-btn" title="Toggle notes panel">
+        <img src="icons/notes.png" class="btn-icon" title="Open from file" />
+      </button>
     </div>
   </div>`;
 
@@ -380,10 +382,6 @@ export function renderDetail(idx) {
       </button>
       ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
       <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
-      <div class="timeout-wrapper">
-        <label for="timeout-input">Timeout (ms):</label>
-        <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" />
-      </div>
     </div>
   `;
 
