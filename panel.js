@@ -6,13 +6,13 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          filterStatus, 
         //  countBadge, 
          statusText, statusCount,
-         divider, MAX_LOGS, loadTimeoutSetting} from './modules/state.js';
+         divider, MAX_LOGS,  theme, setTheme, captureFilter, timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting } from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
-import { theme, setTheme, captureFilter } from './modules/state.js';
+// import { theme, setTheme, captureFilter, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting } from './modules/state.js';
 import { getLatestVersion } from './modules/helpers.js';
 
 const reloadBtn = document.getElementById('reload-btn');
@@ -129,6 +129,51 @@ document.getElementById('clear').onclick = async () => {
   detailContent.style.display = 'none';
   statusText.textContent = 'Cleared';
 };
+
+// ── Timeout Modal ──
+const timeoutBtn = document.getElementById('timeout-btn');
+const timeoutModal = document.getElementById('timeoutModal');
+const timeoutInputModal = document.getElementById('timeout-input-modal');
+const timeoutSaveBtn = document.getElementById('timeoutSaveBtn');
+const timeoutCancelBtn = document.getElementById('timeoutCancelBtn');
+
+function openTimeoutModal() {
+  timeoutInputModal.value = timeoutMs; // dari state
+  timeoutModal.style.display = 'flex';
+}
+
+function closeTimeoutModal() {
+  timeoutModal.style.display = 'none';
+}
+
+if (timeoutBtn) {
+  timeoutBtn.addEventListener('click', openTimeoutModal);
+}
+
+if (timeoutCancelBtn) {
+  timeoutCancelBtn.addEventListener('click', closeTimeoutModal);
+}
+
+if (timeoutSaveBtn) {
+  timeoutSaveBtn.addEventListener('click', () => {
+    const val = parseInt(timeoutInputModal.value, 10);
+    if (isNaN(val) || val < 1000) {
+      statusText.textContent = 'Timeout must be at least 1000ms';
+      return;
+    }
+    setTimeoutMs(val);
+    saveTimeoutSetting();
+    statusText.textContent = `Timeout set to ${val}ms`;
+    closeTimeoutModal();
+  });
+}
+
+// Tutup modal jika klik di luar konten
+if (timeoutModal) {
+  timeoutModal.addEventListener('click', (e) => {
+    if (e.target === timeoutModal) closeTimeoutModal();
+  });
+}
 
 chrome.storage.onChanged.addListener((changes, ns) => {
   if (ns === 'local' && changes.logs && !ignoreStorageChange) {

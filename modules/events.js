@@ -282,20 +282,20 @@ export function attachSubtabEvents(idx) {
   setupDetailDelegation();
 
   // timeout
-  const timeoutInput = document.getElementById('timeout-input');
-  if (timeoutInput) {
-    timeoutInput.addEventListener('change', function() {
-      const val = parseInt(this.value, 10);
-      if (!isNaN(val) && val >= 1000) {
-        import('./network.js').then(module => {
-          module.updateTimeout(val);
-        });
-      } else {
-        this.value = timeoutMs; // revert
-        statusText.textContent = 'Invalid timeout';
-      }
-    });
-  }
+  // const timeoutInput = document.getElementById('timeout-input');
+  // if (timeoutInput) {
+  //   timeoutInput.addEventListener('change', function() {
+  //     const val = parseInt(this.value, 10);
+  //     if (!isNaN(val) && val >= 1000) {
+  //       import('./network.js').then(module => {
+  //         module.updateTimeout(val);
+  //       });
+  //     } else {
+  //       this.value = timeoutMs; // revert
+  //       statusText.textContent = 'Invalid timeout';
+  //     }
+  //   });
+  // }
 
 
   // notes
