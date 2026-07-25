@@ -22,6 +22,62 @@ const btnIcon = document.getElementById('btn-icon'); // atau img
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress-bar');
 
+// ── Notes sidebar resize ──
+const notesDivider = document.getElementById('notes-divider');
+const notesSidebar = document.getElementById('notes-sidebar');
+let isResizing = false;
+
+function initNotesResize() {
+  if (!notesDivider || !notesSidebar) return;
+  
+  notesDivider.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    notesDivider.classList.add('active');
+  });
+}
+
+// Toggle notes dari tombol di detail header
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('#notes-toggle-detail');
+  if (target) {
+    toggleNotes();
+  }
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return;
+  const rect = document.getElementById('detail-wrapper').getBoundingClientRect();
+  const newWidth = rect.right - e.clientX - 4; // 4px untuk divider
+  if (newWidth >= 150 && newWidth <= 600) {
+    notesSidebar.style.width = newWidth + 'px';
+    // Simpan lebar ke state jika ingin persist
+    // setNotesWidth(newWidth);
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    notesDivider.classList.remove('active');
+  }
+});
+
+
+// ── Toggle notes visibility ──
+function toggleNotes() {
+  notesSidebar.classList.toggle('collapsed');
+  const isVisible = !notesSidebar.classList.contains('collapsed');
+  document.getElementById('notes-toggle-detail').style.display = isVisible ? 'none' : '';
+}
+
+// Pasang event listener ke tombol toggle
+document.getElementById('notes-toggle-toolbar')?.addEventListener('click', toggleNotes);
+document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotes);
+
 
 // ── Resize divider ──
 let isDragging = false;
