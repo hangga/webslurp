@@ -9,6 +9,13 @@ export let ignoreStorageChange = false;
 
 export let originalLogSnapshot = null;
 
+// ── State untuk notes sidebar ──
+export let notesVisible = true;
+export let notesWidth = 280; // default width in px
+
+export function setNotesVisible(val) { notesVisible = val; }
+export function setNotesWidth(val) { notesWidth = val; }
+
 export function setOriginalLogSnapshot(snapshot) {
   originalLogSnapshot = snapshot;
 }

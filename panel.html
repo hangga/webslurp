@@ -113,17 +113,39 @@
         <div id="log-list-container"></div>
       </div>
       <div id="divider"></div>
-      <div id="detail-panel">
+      <!-- <div id="detail-panel">
         <div id="detail-empty">Select a request to view details</div>
         <div id="detail-content"></div>
         <div class="sticky-search" id="sticky-search" hidden>
-          <!-- search content -->
-          <!-- Response Search -->
+          <input id="response-search" type="text" placeholder="Search response..." spellcheck="false" />
+          <button id="response-search-prev" class="search-nav">◀</button>
+          <button id="response-search-next" class="search-nav">▶</button>
+        </div>
+      </div> -->
+      
+      <div id="detail-panel">
+        <!-- <button id="notes-toggle-toolbar" class="btn primary" title="Toggle Notes">
+          <img src="icons/note.png" class="btn-icon" />
+        </button> -->
+        <div id="detail-empty">Select a request to view details</div>
+        <div id="detail-wrapper">
+          <div id="detail-content"></div>
+          <div id="notes-divider" class="resize-handle" title="Drag to resize notes"></div>
+          <div id="notes-sidebar" class="collapsed">
+            <div class="notes-header">
+              <span>📝 Notes</span>
+              <button id="notes-toggle-btn" class="notes-toggle" title="Toggle notes panel">✕</button>
+            </div>
+            <textarea id="log-note-sidebar" placeholder="Add your note here..."></textarea>
+          </div>
+        </div>
+        <div class="sticky-search" id="sticky-search" hidden>
           <input id="response-search" type="text" placeholder="Search response..." spellcheck="false" />
           <button id="response-search-prev" class="search-nav">◀</button>
           <button id="response-search-next" class="search-nav">▶</button>
         </div>
       </div>
+    
     </div>
     <footer id="status-bar">
       <span id="status-text">Listening…</span>

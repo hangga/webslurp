@@ -367,6 +367,9 @@ export function renderDetail(idx) {
   html += `<div class="detail-tabs">
     <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
     <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
+    <div class="detail-tabs-actions">
+      <button id="notes-toggle-detail" class="notes-toggle-btn" title="Toggle notes panel">📝</button>
+    </div>
   </div>`;
 
   html += `<div class="tab-panel ${activeTab === 'request' ? 'active' : ''}" data-panel="request">`;
@@ -377,18 +380,18 @@ export function renderDetail(idx) {
     <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>`;
   
   html += `
-  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-    <button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
-      ${isSending ? '⏳ Sending...' : '▶ Send'}
-    </button>
-    ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
-    <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
-    <div class="timeout-wrapper">
-      <label for="timeout-input">Timeout (ms):</label>
-      <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" />
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
+        ${isSending ? '⏳ Sending...' : '▶ Send'}
+      </button>
+      ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
+      <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
+      <div class="timeout-wrapper">
+        <label for="timeout-input">Timeout (ms):</label>
+        <input type="number" id="timeout-input" value="${timeoutMs}" min="1000" step="500" />
+      </div>
     </div>
-  </div>
-`;
+  `;
 
   // Status setelah send
   if (isSending) {
@@ -502,7 +505,7 @@ export function renderDetail(idx) {
   html += `</div>`;
 
   // ── Note ──
-  html += `<div class="note-area"><label>Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
+  // html += `<div class="note-area"><label>Note</label><textarea id="log-note" placeholder="Add your note here...">${escapeHtml(log.note || '')}</textarea></div>`;
 
   detailContent.innerHTML = html;
 
@@ -546,11 +549,20 @@ export function renderDetail(idx) {
     });
   }
 
+  console.log('CEK LOG =========> ', log.note || '');
+
   // Note
-  const noteTextarea = document.getElementById('log-note');
-  if (noteTextarea) noteTextarea.addEventListener('input', () => {
-    logs[idx].note = noteTextarea.value;
-  });
+  const noteTextarea = document.getElementById('log-note-sidebar');
+  if (noteTextarea) {
+    noteTextarea.value = log.note || '';
+    noteTextarea.addEventListener('input', () => {
+      logs[idx].note = noteTextarea.value;
+      saveLogs();
+    });
+  }
+  // if (noteTextarea) noteTextarea.addEventListener('input', () => {
+  //   logs[idx].note = noteTextarea.value;
+  // });
 
   // Selalu pasang event untuk subtab (update log saat input berubah)
   attachSubtabEvents(idx);
