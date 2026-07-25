@@ -8,7 +8,7 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          MAX_LOGS, timeoutMs, setOriginalLogSnapshot } from './state.js';
 import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
         buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
-        getBaseDomain, autoResizeTextarea, parseMultipartFormData } from './helpers.js';
+        getBaseDomain, autoResizeTextarea, parseMultipartFormData, getEndpoint } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -279,7 +279,7 @@ export function renderList(callback) {
           
           <span class="status ${sc}">${log.status}</span>
           <span class="method">${log.method || 'GET'}</span>
-          <span class="url">${escapeHtml(log.url)}</span>
+          <span class="url">${escapeHtml(getEndpoint(log.url))}</span>
           ${log.note ? '<span class="note-icon">📝</span>' : ''}
           <span class="time">${log.time || ''}</span>
         `;

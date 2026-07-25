@@ -1856,7 +1856,7 @@ body {
 .log-entry .method {
   color: var(--text-method);
   font-weight: 500;
-  min-width: 44px;
+  /* min-width: 44px; */
   font-size: 12px;
 }
 .log-entry .url {
@@ -1866,6 +1866,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 12px;
+  letter-spacing: 0.4px;
 }
 .log-entry .time {
   color: var(--text-time);
