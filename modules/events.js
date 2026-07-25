@@ -281,6 +281,46 @@ export function attachSubtabEvents(idx) {
   // Pastikan delegation sudah aktif
   setupDetailDelegation();
 
+  // timeout
+  const timeoutInput = document.getElementById('timeout-input');
+  if (timeoutInput) {
+    timeoutInput.addEventListener('change', function() {
+      const val = parseInt(this.value, 10);
+      if (!isNaN(val) && val >= 1000) {
+        import('./network.js').then(module => {
+          module.updateTimeout(val);
+        });
+      } else {
+        this.value = timeoutMs; // revert
+        statusText.textContent = 'Invalid timeout';
+      }
+    });
+  }
+
+
+  // notes
+  // const noteTextarea = document.getElementById('log-note-sidebar');
+  // if (noteTextarea) {
+  //   noteTextarea.value = log.note || '';
+  //   noteTextarea.addEventListener('blur', () => {
+  //     logs[idx].note = noteTextarea.value;
+  //     saveLogs();
+  //   });
+  // }
+
+  let saveTimer;
+
+  const noteTextarea = document.getElementById('log-note-sidebar');
+  if (noteTextarea) {
+    noteTextarea.value = log.note || '';
+    noteTextarea.oninput = () => {
+      logs[idx].note = noteTextarea.value;
+
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveLogs, 300);
+    };
+  }
+
   // ── Elemen tunggal: method, url, body mode, auth, dll. ──
   const methodSelect = document.getElementById('edit-method');
   if (methodSelect) {
@@ -438,7 +478,6 @@ export function attachSubtabEvents(idx) {
     if (newGrant) newGrant.addEventListener('change', () => { log.auth.grantType = newGrant.value; saveLogs(); renderDetail(idx); });
   }
   // ... dan seterusnya untuk field OAuth2 lainnya
-  // (Saya singkat agar tidak terlalu panjang, tapi prinsipnya sama: replace + addEventListener)
 
   // Untuk OAuth2, kita bisa buat helper agar tidak berulang
   attachOAuth2Events(idx, log);

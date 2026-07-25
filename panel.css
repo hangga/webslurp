@@ -1769,8 +1769,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: var(--bg-tertiary, #2d2d2d);
+  padding: 11px 12px;
+  /* background-color: var(--bg-detail); */
+  background: linear-gradient(90deg, var(--badge-bg), var(--accent));
   border-bottom: 1px solid var(--border-color, #3c3c3c);
   font-weight: 600;
   font-size: 13px;
@@ -1783,6 +1784,7 @@ body {
   cursor: pointer;
   font-size: 16px;
   padding: 0 4px;
+  color: var(--text-color);
 }
 
 #log-note-sidebar {

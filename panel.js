@@ -147,6 +147,8 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   startCapture();
   statusText.textContent = 'Listening…';
 
+  initNotesResize();
+
   const currentVersion = chrome.runtime.getManifest().version;
 
   document.getElementById('about-version-btn').textContent = `v${currentVersion}`;
