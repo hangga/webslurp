@@ -285,108 +285,108 @@ export function autoResizeTextarea(textarea) {
 }
 
 export function detectCategory({
-    url = '',
-    method = '',
-    requestHeaders = {},
-    responseHeaders = {},
-    requestBody = '',
-    responseBody = ''
+  url = '',
+  method = '',
+  requestHeaders = {},
+  responseHeaders = {},
+  requestBody = '',
+  responseBody = ''
 }) {
-    url = url.toLowerCase();
+  url = url.toLowerCase();
 
-    const reqContentType =
-        (requestHeaders['content-type'] || '').split(';')[0].toLowerCase();
+  const reqContentType =
+    (requestHeaders['content-type'] || '').split(';')[0].toLowerCase();
 
-    const respContentType =
-        (responseHeaders['content-type'] || '').split(';')[0].toLowerCase();
+  const respContentType =
+    (responseHeaders['content-type'] || '').split(';')[0].toLowerCase();
 
-    const contentType = respContentType || reqContentType;
+  const contentType = respContentType || reqContentType;
 
-    // ===== Berdasarkan Content-Type =====
-    if (contentType.includes('text/html')) return 'html';
-    if (contentType.includes('text/css')) return 'css';
-    if (contentType.includes('javascript') || contentType.includes('ecmascript')) return 'js';
+  // ===== Berdasarkan Content-Type =====
+  if (contentType.includes('text/html')) return 'html';
+  if (contentType.includes('text/css')) return 'css';
+  if (contentType.includes('javascript') || contentType.includes('ecmascript')) return 'js';
+
+  if (
+    contentType.includes('application/json') ||
+    contentType.includes('application/ld+json')
+  ) {
+    const isGraphQL =
+      url.includes('/graphql') ||
+      /"query"\s*:/.test(requestBody);
+
+    return isGraphQL ? 'graphql' : 'api';
+  }
+
+  if (contentType.includes('application/xml') || contentType.includes('text/xml'))
+    return 'xml';
+
+  if (contentType.startsWith('image/')) return 'image';
+  if (contentType.startsWith('video/')) return 'video';
+  if (contentType.startsWith('audio/')) return 'audio';
+
+  if (
+    contentType.includes('woff') ||
+    contentType.includes('ttf') ||
+    contentType.includes('font')
+  )
+    return 'font';
+
+  if (contentType.includes('application/pdf')) return 'pdf';
+
+  if (contentType.includes('application/wasm')) return 'wasm';
+
+  // ===== Berdasarkan URL =====
+
+  const pathname = new URL(url).pathname.toLowerCase();
+
+  if (pathname.endsWith('.js') || pathname.endsWith('.mjs'))
+    return 'js';
+
+  if (pathname.endsWith('.css'))
+    return 'css';
+
+  if (/\.(png|jpg|jpeg|gif|svg|ico|webp|avif)$/i.test(pathname))
+    return 'image';
+
+  if (/\.(mp4|webm|mov|avi|mkv)$/i.test(pathname))
+    return 'video';
+
+  if (/\.(woff2?|ttf|otf|eot)$/i.test(pathname))
+    return 'font';
+
+  if (pathname.endsWith('.pdf'))
+    return 'pdf';
+
+  // ===== Heuristik API =====
+
+  if (
+    url.includes('/api/') ||
+    url.includes('/graphql') ||
+    /^api\./.test(new URL(url).hostname)
+  ) {
+    return url.includes('/graphql') ? 'graphql' : 'api';
+  }
+
+  // ===== Berdasarkan Body =====
+
+  if (responseBody) {
+    const body = responseBody.trim();
 
     if (
-        contentType.includes('application/json') ||
-        contentType.includes('application/ld+json')
+      (body.startsWith('{') && body.endsWith('}')) ||
+      (body.startsWith('[') && body.endsWith(']'))
     ) {
-        const isGraphQL =
-            url.includes('/graphql') ||
-            /"query"\s*:/.test(requestBody);
-
-        return isGraphQL ? 'graphql' : 'api';
+      return 'api';
     }
+  }
 
-    if (contentType.includes('application/xml') || contentType.includes('text/xml'))
-        return 'xml';
+  // ===== Berdasarkan HTTP Method =====
 
-    if (contentType.startsWith('image/')) return 'image';
-    if (contentType.startsWith('video/')) return 'video';
-    if (contentType.startsWith('audio/')) return 'audio';
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()))
+    return 'api';
 
-    if (
-        contentType.includes('woff') ||
-        contentType.includes('ttf') ||
-        contentType.includes('font')
-    )
-        return 'font';
-
-    if (contentType.includes('application/pdf')) return 'pdf';
-
-    if (contentType.includes('application/wasm')) return 'wasm';
-
-    // ===== Berdasarkan URL =====
-
-    const pathname = new URL(url).pathname.toLowerCase();
-
-    if (pathname.endsWith('.js') || pathname.endsWith('.mjs'))
-        return 'js';
-
-    if (pathname.endsWith('.css'))
-        return 'css';
-
-    if (/\.(png|jpg|jpeg|gif|svg|ico|webp|avif)$/i.test(pathname))
-        return 'image';
-
-    if (/\.(mp4|webm|mov|avi|mkv)$/i.test(pathname))
-        return 'video';
-
-    if (/\.(woff2?|ttf|otf|eot)$/i.test(pathname))
-        return 'font';
-
-    if (pathname.endsWith('.pdf'))
-        return 'pdf';
-
-    // ===== Heuristik API =====
-
-    if (
-        url.includes('/api/') ||
-        url.includes('/graphql') ||
-        /^api\./.test(new URL(url).hostname)
-    ) {
-        return url.includes('/graphql') ? 'graphql' : 'api';
-    }
-
-    // ===== Berdasarkan Body =====
-
-    if (responseBody) {
-        const body = responseBody.trim();
-
-        if (
-            (body.startsWith('{') && body.endsWith('}')) ||
-            (body.startsWith('[') && body.endsWith(']'))
-        ) {
-            return 'api';
-        }
-    }
-
-    // ===== Berdasarkan HTTP Method =====
-
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()))
-        return 'api';
-
-    return 'other';
+  return 'other';
 }
 
 export async function getLatestVersion() {
@@ -498,81 +498,81 @@ export async function getLatestVersion() {
  * }>}
  */
 export function parseMultipartFormData(postData) {
-    if (!postData || !Array.isArray(postData.params)) {
-        return [];
-    }
+  if (!postData || !Array.isArray(postData.params)) {
+    return [];
+  }
 
-    const text = postData.text || "";
-    const metadata = new Map();
+  const text = postData.text || "";
+  const metadata = new Map();
 
-    // ----------------------------------------------------
-    // Parse metadata (filename + content-type) dari raw body
-    // ----------------------------------------------------
-    if (text) {
+  // ----------------------------------------------------
+  // Parse metadata (filename + content-type) dari raw body
+  // ----------------------------------------------------
+  if (text) {
 
-        const boundaryMatch = postData.mimeType?.match(/boundary=([^;]+)/i);
+    const boundaryMatch = postData.mimeType?.match(/boundary=([^;]+)/i);
 
-        if (boundaryMatch) {
+    if (boundaryMatch) {
 
-            const boundary = boundaryMatch[1];
-            const delimiter = `--${boundary}`;
+      const boundary = boundaryMatch[1];
+      const delimiter = `--${boundary}`;
 
-            const parts = text
-                .split(delimiter)
-                .slice(1, -1);
+      const parts = text
+        .split(delimiter)
+        .slice(1, -1);
 
-            for (let part of parts) {
+      for (let part of parts) {
 
-                part = part.trim();
+        part = part.trim();
 
-                if (!part) continue;
+        if (!part) continue;
 
-                const idx = part.indexOf("\r\n\r\n");
+        const idx = part.indexOf("\r\n\r\n");
 
-                if (idx === -1) continue;
+        if (idx === -1) continue;
 
-                const headerBlock = part.substring(0, idx);
+        const headerBlock = part.substring(0, idx);
 
-                const disposition =
-                    headerBlock.match(/Content-Disposition:\s*([^\r\n]+)/i)?.[1];
+        const disposition =
+          headerBlock.match(/Content-Disposition:\s*([^\r\n]+)/i)?.[1];
 
-                if (!disposition) continue;
+        if (!disposition) continue;
 
-                const name =
-                    disposition.match(/name="([^"]+)"/i)?.[1];
+        const name =
+          disposition.match(/name="([^"]+)"/i)?.[1];
 
-                if (!name) continue;
+        if (!name) continue;
 
-                const filename =
-                    disposition.match(/filename="([^"]*)"/i)?.[1];
+        const filename =
+          disposition.match(/filename="([^"]*)"/i)?.[1];
 
-                const contentType =
-                    headerBlock.match(/Content-Type:\s*([^\r\n]+)/i)?.[1];
+        const contentType =
+          headerBlock.match(/Content-Type:\s*([^\r\n]+)/i)?.[1];
 
-                if (filename || contentType) {
-                    metadata.set(name, {
-                        filename,
-                        contentType
-                    });
-                }
-            }
+        if (filename || contentType) {
+          metadata.set(name, {
+            filename,
+            contentType
+          });
         }
+      }
     }
+  }
 
-    // ----------------------------------------------------
-    // Merge params + metadata
-    // ----------------------------------------------------
-    return postData.params.map(param => {
+  // ----------------------------------------------------
+  // Merge params + metadata
+  // ----------------------------------------------------
+  return postData.params.map(param => {
 
-        const meta = metadata.get(param.name);
+    const meta = metadata.get(param.name);
 
-        return {
-            key: param.name,
-            value: param.value,
-            type: meta ? "file" : "text",
-            filename: meta?.filename,
-            contentType: meta?.contentType
-        };
+    return {
+      key: param.name,
+      value: param.value,
+      type: meta ? "file" : "text",
+      filename: meta?.filename,
+      contentType: meta?.contentType
+    };
 
-    });
+  });
 }

@@ -5,19 +5,6 @@ const STORAGE_KEY = 'WebSlurp_logs';
 const SETTINGS_KEY = 'WebSlurp_settings';
 const MAX_SAVED_LOGS = 200; // atau 3000
 
-// export async function saveLogs() {
-//   setIgnoreStorageChange(true);
-//   try {
-//     // await chrome.storage.local.set({ logs });
-//     const data = JSON.stringify(logs);
-//     await chrome.storage.local.set({ [STORAGE_KEY]: data });
-//   } catch (e){
-//     console.warn('[WebSlurp] Gagal menyimpan logs:', e);
-//   } finally {
-//     setIgnoreStorageChange(false);
-//   }
-// }
-
 export async function saveLogs() {
   setIgnoreStorageChange(true);
   try {
@@ -36,10 +23,6 @@ export async function saveLogs() {
   }
 }
 
-// export async function loadLogs() {
-//   const result = await chrome.storage.local.get('logs');
-//   setLogs(result.logs || []);
-// }
 export async function loadLogs() {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEY);

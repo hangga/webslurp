@@ -1,12 +1,16 @@
 // render.js
-import { logs, selectedId, sendingId, activeTab, activeSubTab, setSelectedId, setActiveTab, 
-        setActiveSubTab, logListContainer, detailEmpty, detailContent, statusText, statusCount, 
-        expandedGroups, toggleGroup, MAX_LOGS, timeoutMs, setOriginalLogSnapshot } 
-        from './state.js';
-import { escapeHtml, formatOutput, statusClass, headersToArray, headersToObject, 
-        buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
-        getBaseDomain, autoResizeTextarea, parseMultipartFormData, getEndpoint } 
-        from './helpers.js';
+import {
+  logs, selectedId, sendingId, activeTab, activeSubTab, setSelectedId, setActiveTab,
+  setActiveSubTab, logListContainer, detailEmpty, detailContent, statusText, statusCount,
+  expandedGroups, toggleGroup, MAX_LOGS, timeoutMs, setOriginalLogSnapshot
+}
+  from './state.js';
+import {
+  escapeHtml, formatOutput, statusClass, headersToArray, headersToObject,
+  buildUrlWithParams, bodyToJson, formatOutputPlain, highlightText, getCategoryIcon,
+  getBaseDomain, autoResizeTextarea, parseMultipartFormData, getEndpoint
+}
+  from './helpers.js';
 // import { saveLogs } from './storage.js';
 import { filterLogs } from './filter.js';
 import { attachSubtabEvents } from './events.js';
@@ -19,12 +23,12 @@ const expandedSubGroups = new Set();
 
 const severityOrder = ['info', 'low', 'medium', 'high', 'critical'];
 const severityIcons = {
-    info: 'ℹ️',
-    low: '🟢',
-    medium: '🟡',
-    high: '🟠',
-    critical: '🔴'
-  };
+  info: 'ℹ️',
+  low: '🟢',
+  medium: '🟡',
+  high: '🟠',
+  critical: '🔴'
+};
 
 // --- Batasi jumlah tampilan untuk mencegah hang ---
 const MAX_DISPLAY_LOGS = 200;
@@ -83,7 +87,7 @@ export function initDelegation() {
   if (delegationInitialized) return;
   if (!logListContainer) return;
 
-  logListContainer.addEventListener('click', function(e) {
+  logListContainer.addEventListener('click', function (e) {
     // 1. Klik pada log entry
     const entry = e.target.closest('.log-entry');
     if (entry) {
@@ -146,7 +150,7 @@ export function initDelegation() {
 export function renderList(callback) {
   // Pastikan delegation terpasang
   initDelegation();
-  
+
   const filtered = filterLogs();
   // countBadge.textContent = filtered.length;
   statusCount.textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
@@ -269,7 +273,7 @@ export function renderList(callback) {
           : '';
 
         entry.innerHTML = `
-          ${securityBadge? securityBadge :''}
+          ${securityBadge ? securityBadge : ''}
           <span class="req-icon">${getCategoryIcon(log.category)}</span>
           ${log.hasAuth ? '<span class="auth-indicator">🔐</span>' : ''}
           <span class="status ${sc}">${log.status}</span>
@@ -284,7 +288,7 @@ export function renderList(callback) {
         const secrets = log.sensitiveTypes?.secrets?.length ? '🔑 Secrets' : '';
         const sec = securityFindings.length > 0 ? securityFindings.message : '';
         entry.title = [authTitle, pii, secrets, sec].filter(Boolean).join(' • ');
-        
+
         subBody.appendChild(entry);
       });
 
@@ -372,9 +376,9 @@ export function renderDetail(idx) {
 
   // ── Request meta (selalu editable) ──
   html += `<div class="request-meta">
-    <div class="method-wrap"><select id="edit-method">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+    <div class="method-wrap"><select id="edit-method">${['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].map(m => `<option value="${m}" ${m === (log.method || 'GET') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
     <div class="url-wrap"><input type="text" id="edit-url" value="${escapeHtml(log.url)}" /></div>`;
-  
+
   html += `
     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
       <button class="btn btn-send" id="action-send" ${isSending ? 'disabled' : ''}>
@@ -405,7 +409,7 @@ export function renderDetail(idx) {
     }
     html += `<div class="send-status ${cls}">${label}</div>`;
   }
-  
+
   html += `
   </div>`;
 
@@ -420,12 +424,12 @@ export function renderDetail(idx) {
     ${renderHeadersSubtab(log)}
     ${renderBodySubtab(log)}
   </div>`;
-  
+
   html += `</div>`; // tutup panel request
 
   // ── Response panel ──
   html += `<div class="tab-panel ${activeTab === 'response' ? 'active' : ''}" data-panel="response">`;
-  
+
   if (log.status) {
     const sc = statusClass(log.status);
     html += `<div class="response-summary">
@@ -449,7 +453,7 @@ export function renderDetail(idx) {
       });
       html += `</div>`;
     }
-    
+
     const respHeaders = headersToArray(log.responseHeaders || {});
 
     // --- Buat teks lengkap response (status + headers + body) ---
@@ -463,7 +467,7 @@ export function renderDetail(idx) {
       const types = [...log.sensitiveTypes.pii, ...log.sensitiveTypes.secrets];
       sensitiveBadge = `<span class="sensitive-badge">⚠️ Sensitive: ${types.join(', ')}</span>`;
     }
-  
+
     const highlightedFull = highlightText(fullResponseText, '');
 
     // let sensitiveBadge = '';
@@ -471,7 +475,7 @@ export function renderDetail(idx) {
       const types = [...log.sensitiveTypes.pii, ...log.sensitiveTypes.secrets];
       sensitiveBadge = `<span class="sensitive-badge">⚠️ Sensitive: ${types.join(', ')}</span>`;
     }
-    
+
     html += `<div class="response-body">
     <label>Response</label>
       <div class="rb-content" id="response-body-content">${highlightedFull}</div>
@@ -489,12 +493,12 @@ export function renderDetail(idx) {
   stickySearch.hidden = activeTab !== 'response';
 
   // ── Event binding ──
-  detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function(e) {
+  detailContent.querySelectorAll('.detail-tab').forEach(tab => tab.addEventListener('click', function (e) {
     const tabName = this.dataset.tab;
     if (tabName && tabName !== activeTab) { setActiveTab(tabName); renderDetail(idx); }
     stickySearch.hidden = activeTab !== 'response';
   }));
-  detailContent.querySelectorAll('.sub-tab').forEach(tab => tab.addEventListener('click', function(e) {
+  detailContent.querySelectorAll('.sub-tab').forEach(tab => tab.addEventListener('click', function (e) {
     const subTab = this.dataset.subtab;
     if (subTab && subTab !== activeSubTab) { setActiveSubTab(subTab); renderDetail(idx); }
   }));
@@ -725,7 +729,7 @@ function renderFormDataFields(log) {
   fields.forEach((f, i) => {
     const isFile = f.type === 'file';
     console.log('CEK-TYPE ========>', f);
-    
+
     html += `<div class="form-row" data-findex="${i}">
       <div class="fkey"><input class="form-key" value="${escapeHtml(f.key)}" placeholder="Key" /></div>
       <div class="ftype">

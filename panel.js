@@ -1,24 +1,20 @@
 // ── panel.js ── Entry point
-import { logs, selectedId, sendingId, activeTab, activeSubTab,
-         setLogs, setSelectedId, setSendingId,
-         setActiveTab, setActiveSubTab, ignoreStorageChange, setIgnoreStorageChange,
-         logListEl, detailEmpty, detailContent, searchInput, filterMethod,
-         filterStatus, 
-        //  countBadge, 
-         statusText, statusCount,
-         divider, MAX_LOGS,  theme, setTheme, captureFilter, timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting } from './modules/state.js';
-import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
+import {
+  logs, selectedId, sendingId, activeTab, activeSubTab, setLogs,
+  setSelectedId, setSendingId, setActiveTab, setActiveSubTab, ignoreStorageChange,
+  setIgnoreStorageChange, logListEl, detailEmpty, detailContent, searchInput, filterMethod,
+  filterStatus, statusText, statusCount, divider, MAX_LOGS, theme, setTheme, captureFilter,
+  timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting
+} from './modules/state.js';
+import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
-// import { theme, setTheme, captureFilter, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting } from './modules/state.js';
 import { getLatestVersion } from './modules/helpers.js';
 
 const reloadBtn = document.getElementById('reload-btn');
-const btnIcon = document.getElementById('btn-icon'); // atau img
-// const btnSpinner = document.getElementById('btn-spinner');
-
+const btnIcon = document.getElementById('btn-icon');
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress-bar');
 
@@ -29,7 +25,7 @@ let isResizing = false;
 
 function initNotesResize() {
   if (!notesDivider || !notesSidebar) return;
-  
+
   notesDivider.addEventListener('mousedown', (e) => {
     isResizing = true;
     document.body.style.cursor = 'col-resize';
@@ -39,7 +35,7 @@ function initNotesResize() {
 }
 
 // Toggle notes dari tombol di detail header
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   const target = e.target.closest('#notes-toggle-detail');
   if (target) {
     toggleNotes();
@@ -113,7 +109,7 @@ document.getElementById('clear').onclick = async () => {
     statusText.textContent = 'No logs to clear';
     return;
   }
-  
+
   const confirmed = await customConfirm(
     'Are you sure you want to clear all logs?\n\nUnsaved logs will be permanently deleted. Save them to a file first if you want to keep a copy.\n\nThis action cannot be undone.'
   );
@@ -203,13 +199,10 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   if (latest) {
     if (latest.version !== currentVersion) {
       document.getElementById('about-version-btn').textContent =
-        // `v${currentVersion} • v${latest.version} is available. Update now 🚀`;
         `v${latest.version} is available. Update now 🚀`;
     }
   }
 })();
-
-
 
 
 // ── Tema ──
@@ -306,7 +299,7 @@ reloadBtn.addEventListener('click', () => {
   // Contoh untuk lingkungan DevTools
   if (chrome.devtools && chrome.devtools.inspectedWindow) {
     chrome.devtools.inspectedWindow.reload({
-        ignoreCache: true
+      ignoreCache: true
     });
   } else {
     // Jika di popup atau content script, reload tab aktif
@@ -318,18 +311,6 @@ reloadBtn.addEventListener('click', () => {
   }
 });
 
-// const tabId = chrome.devtools.inspectedWindow.tabId; // tersedia di DevTools
-
-// Pantau perubahan status tab
-// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-//   if (tabId === chrome.devtools.inspectedWindow.tabId) {
-//     if (changeInfo.status === 'loading') {
-//       setLoading(true);
-//     } else if (changeInfo.status === 'complete') {
-//       setLoading(false);
-//     }
-//   }
-// });
 
 function customConfirm(message) {
   return new Promise((resolve) => {
@@ -382,16 +363,7 @@ document.getElementById('import-btn')?.addEventListener('click', () => {
     if (!file) return;
     try {
       await importLogsFromFile(file);
-      // Refresh tampilan setelah import
       renderList();
-      // Tampilkan detail log pertama (jika ada)
-      // if (logs.length > 0) {
-      //   setSelectedId(0);
-      //   renderDetail(0);
-      // } else {
-      //   // kosongkan detail
-      //   document.getElementById('detail-content').innerHTML = '<p class="empty">No logs</p>';
-      // }
     } catch (err) {
       alert('Gagal import: ' + err.message);
     }
@@ -404,7 +376,6 @@ const aboutModal = document.getElementById('aboutModal');
 const aboutBtn = document.getElementById('about-btn');
 const aboutClose = document.getElementById('aboutCloseBtn');
 const aboutVersion = document.getElementById('about-version');
-
 
 if (aboutVersion) {
   try {

@@ -547,30 +547,6 @@ export function detectSecrets(text) {
     return { hasSecrets: false, types: [] };
   }
 
-  // const patterns = [
-  //   { type: 'jwt', regex: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g },
-  //   { type: 'bearer_token', regex: /\bBearer\s+[A-Za-z0-9._~+/=-]{10,}\b/gi },
-  //   { type: 'api_key', regex: /\b(?:api[-_.]?key|apikey)\b\s*["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi },
-  //   { type: 'access_token', regex: /\baccess[-_.]?token\b\s*["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi },
-  //   { type: 'refresh_token', regex: /\brefresh[-_.]?token\b\s*["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi },
-  //   { type: 'auth_token', regex: /\bauth[-_.]?token\b\s*["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi },
-  //   { type: 'password', regex: /\b(?:password|passwd|pwd)\b\s*["']?\s*[:=]\s*["']?[^\s"',}&]{3,}/gi },
-  //   { type: 'client_secret', regex: /\bclient[-_.]?secret\b\s*["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi },
-  //   { type: 'secret_key', regex: /\b(?:secret[-_.]?key|api[-_.]?secret)\b\s*["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi },
-  //   { type: 'private_key', regex: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g }
-  // ];
-
-  // const found = findPatternMatches(text, patterns);
-
-  // const vendorPatterns = [
-  //   { type: 'aws_access_key', regex: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g },
-  //   { type: 'github_token', regex: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\b/g },
-  //   { type: 'github_pat', regex: /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g },
-  //   { type: 'google_api_key', regex: /\bAIza[A-Za-z0-9_-]{35}\b/g },
-  //   { type: 'stripe_secret_key', regex: /\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/g },
-  //   { type: 'slack_token', regex: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g }
-  // ];
-
   const VALUE = `[A-Za-z0-9._~+/=-]{8,}`;
 
   const patterns = [
