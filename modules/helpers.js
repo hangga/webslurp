@@ -8,6 +8,15 @@ export function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+export function getEndpoint(url) {
+  try {
+    const u = new URL(url);
+    return `${u.pathname}${u.search}`;
+  } catch {
+    return url;
+  }
+}
+
 export function bodyToJson(bodyRequest) {
   if (bodyRequest == null) return "";
 

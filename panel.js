@@ -6,13 +6,13 @@ import { logs, selectedId, sendingId, activeTab, activeSubTab,
          filterStatus, 
         //  countBadge, 
          statusText, statusCount,
-         divider, MAX_LOGS, loadTimeoutSetting} from './modules/state.js';
+         divider, MAX_LOGS,  theme, setTheme, captureFilter, timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting } from './modules/state.js';
 import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile  } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
-import { theme, setTheme, captureFilter } from './modules/state.js';
+// import { theme, setTheme, captureFilter, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting } from './modules/state.js';
 import { getLatestVersion } from './modules/helpers.js';
 
 const reloadBtn = document.getElementById('reload-btn');
@@ -21,6 +21,62 @@ const btnIcon = document.getElementById('btn-icon'); // atau img
 
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress-bar');
+
+// ── Notes sidebar resize ──
+const notesDivider = document.getElementById('notes-divider');
+const notesSidebar = document.getElementById('notes-sidebar');
+let isResizing = false;
+
+function initNotesResize() {
+  if (!notesDivider || !notesSidebar) return;
+  
+  notesDivider.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    notesDivider.classList.add('active');
+  });
+}
+
+// Toggle notes dari tombol di detail header
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('#notes-toggle-detail');
+  if (target) {
+    toggleNotes();
+  }
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing) return;
+  const rect = document.getElementById('detail-wrapper').getBoundingClientRect();
+  const newWidth = rect.right - e.clientX - 4; // 4px untuk divider
+  if (newWidth >= 150 && newWidth <= 600) {
+    notesSidebar.style.width = newWidth + 'px';
+    // Simpan lebar ke state jika ingin persist
+    // setNotesWidth(newWidth);
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    notesDivider.classList.remove('active');
+  }
+});
+
+
+// ── Toggle notes visibility ──
+function toggleNotes() {
+  notesSidebar.classList.toggle('collapsed');
+  const isVisible = !notesSidebar.classList.contains('collapsed');
+  document.getElementById('notes-toggle-detail').style.display = isVisible ? 'none' : '';
+}
+
+// Pasang event listener ke tombol toggle
+document.getElementById('notes-toggle-toolbar')?.addEventListener('click', toggleNotes);
+document.getElementById('notes-toggle-btn')?.addEventListener('click', toggleNotes);
 
 
 // ── Resize divider ──
@@ -74,6 +130,51 @@ document.getElementById('clear').onclick = async () => {
   statusText.textContent = 'Cleared';
 };
 
+// ── Timeout Modal ──
+const timeoutBtn = document.getElementById('timeout-btn');
+const timeoutModal = document.getElementById('timeoutModal');
+const timeoutInputModal = document.getElementById('timeout-input-modal');
+const timeoutSaveBtn = document.getElementById('timeoutSaveBtn');
+const timeoutCancelBtn = document.getElementById('timeoutCancelBtn');
+
+function openTimeoutModal() {
+  timeoutInputModal.value = timeoutMs; // dari state
+  timeoutModal.style.display = 'flex';
+}
+
+function closeTimeoutModal() {
+  timeoutModal.style.display = 'none';
+}
+
+if (timeoutBtn) {
+  timeoutBtn.addEventListener('click', openTimeoutModal);
+}
+
+if (timeoutCancelBtn) {
+  timeoutCancelBtn.addEventListener('click', closeTimeoutModal);
+}
+
+if (timeoutSaveBtn) {
+  timeoutSaveBtn.addEventListener('click', () => {
+    const val = parseInt(timeoutInputModal.value, 10);
+    if (isNaN(val) || val < 1000) {
+      statusText.textContent = 'Timeout must be at least 1000ms';
+      return;
+    }
+    setTimeoutMs(val);
+    saveTimeoutSetting();
+    statusText.textContent = `Timeout set to ${val}ms`;
+    closeTimeoutModal();
+  });
+}
+
+// Tutup modal jika klik di luar konten
+if (timeoutModal) {
+  timeoutModal.addEventListener('click', (e) => {
+    if (e.target === timeoutModal) closeTimeoutModal();
+  });
+}
+
 chrome.storage.onChanged.addListener((changes, ns) => {
   if (ns === 'local' && changes.logs && !ignoreStorageChange) {
     refresh();
@@ -90,6 +191,8 @@ chrome.storage.onChanged.addListener((changes, ns) => {
 
   startCapture();
   statusText.textContent = 'Listening…';
+
+  initNotesResize();
 
   const currentVersion = chrome.runtime.getManifest().version;
 
