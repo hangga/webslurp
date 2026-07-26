@@ -2013,7 +2013,7 @@ body {
   color: var(--text-secondary);
   font-size: 16px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 0px;
   border-radius: 4px;
 }
 
