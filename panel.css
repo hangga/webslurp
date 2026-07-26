@@ -1308,16 +1308,17 @@ body {
 
 .actions {
   display: flex;
-  gap: 8px;
+  /* gap: 8px; */
   align-items: center;
   margin-left: auto;
-  padding: 4px 8px;
+  padding: 4px;
   border: none;
   border-radius: 4px;
   font-weight: 500;
   font-size: 12px;
   cursor: pointer;
   height: 28px;
+  width: 36px;
   transition: background 0.15s, opacity 0.15s;
   color: var(--text-primary);
 }
@@ -1355,19 +1356,21 @@ body {
 }
 
 .theme-icon {
-    filter: invert(1);
-    fill: var(--bg-primary);
+    /* filter: invert(1); */
+    /* fill: var(--bg-primary); */
     width: 28px;
     height: 28px;
     padding: 2px;
+    filter: drop-shadow(0px 50px 0 var(--text-primary));
+    transform: translateY(-50px);
 }
 
 .btn-icon {
-    filter: invert(1);
-    fill: var(--bg-primary);
     width: 22px;
     height: 22px;
     padding: 2px;
+    filter: drop-shadow(0px 50px 0 var(--text-primary));
+    transform: translateY(-50px);
 }
 
 .picker {
@@ -1468,9 +1471,16 @@ body {
 #search-bar {
   display: flex;
   align-items: center;
-  padding: 5px 10px 4px 10px;
-  background: linear-gradient(90deg, var(--badge-bg), var(--accent));
-  border-bottom: 1px solid var(--border-color);
+  padding: 5px 10px 4px;
+  background: var(--badge-bg);
+
+  border-bottom: 1px solid;
+  border-image: linear-gradient(
+    90deg,
+    var(--badge-bg),
+    var(--accent)
+  ) 1;
+
   gap: 4px;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -1550,11 +1560,11 @@ body {
 }
 
 .filter-icon{
-  filter: invert(1);
-  fill: var(--bg-primary);
   width:24px;
   height:24px;
   padding:6px 2px 0 2px;
+  filter: drop-shadow(0px 50px 0 var(--text-primary));
+  transform: translateY(-50px);
 }
 
 #count-badge {
