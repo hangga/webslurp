@@ -67,7 +67,7 @@ Install WebSlurp, open Chrome DevTools, and start capturing.
 
 2. Open Chrome Extensions → Developer Mode (Enable)
    <p align="left">
-    <img src="chrome-extension.png" width="500"/>
+    <img src="images/chrome-extension.png" width="500"/>
    </p>
 3. Click Load unpacked. 
 4. Select the **webslurp** directory.
