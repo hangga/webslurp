@@ -1,6 +1,8 @@
-import { logs, selectedId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter,
-          abortController, cancelRequested, timeoutId, timeoutMs,
-          setAbortController, setCancelRequested, setTimeoutId, originalLogSnapshot, setOriginalLogSnapshot } from './state.js';
+import {
+  logs, selectedId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter,
+  abortController, cancelRequested, timeoutId, timeoutMs,
+  setAbortController, setCancelRequested, setTimeoutId, originalLogSnapshot, setOriginalLogSnapshot
+} from './state.js';
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs, saveSettings } from './storage.js';
 import { renderList, renderDetail } from './render.js';
@@ -26,11 +28,11 @@ function detectType(request) {
 
   // 3. Deteksi dari ekstensi file
   const ext = url.split('?')[0].split('.').pop()?.toLowerCase();
-  if (['png','jpg','jpeg','gif','bmp','webp','svg','ico','avif','tiff'].includes(ext)) return 'Image';
+  if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico', 'avif', 'tiff'].includes(ext)) return 'Image';
   if (ext === 'css') return 'Stylesheet';
-  if (['js','mjs','ts','jsx','tsx','jsonp'].includes(ext)) return 'Script';
-  if (['woff','woff2','ttf','otf','eot','sfnt'].includes(ext)) return 'Font';
-  if (['mp4','webm','ogg','mp3','wav','flac','avi','mov','mkv','m4a','aac'].includes(ext)) return 'Media';
+  if (['js', 'mjs', 'ts', 'jsx', 'tsx', 'jsonp'].includes(ext)) return 'Script';
+  if (['woff', 'woff2', 'ttf', 'otf', 'eot', 'sfnt'].includes(ext)) return 'Font';
+  if (['mp4', 'webm', 'ogg', 'mp3', 'wav', 'flac', 'avi', 'mov', 'mkv', 'm4a', 'aac'].includes(ext)) return 'Media';
 
   // 4. Deteksi WebSocket dari header Upgrade
   const headers = request.request.headers || [];
@@ -68,9 +70,9 @@ function detectType(request) {
   const path = url.split('?')[0];
   const pathSegments = path.split('/').filter(Boolean);
   const lastSegment = pathSegments.pop() || '';
-  if (lastSegment.includes('api') || lastSegment.includes('graphql') || 
-      path.includes('/api/') || path.includes('/graphql/') ||
-      path.includes('/rest/')) {
+  if (lastSegment.includes('api') || lastSegment.includes('graphql') ||
+    path.includes('/api/') || path.includes('/graphql/') ||
+    path.includes('/rest/')) {
     return 'API';
   }
 
@@ -92,27 +94,27 @@ function shouldCapture(request) {
     // Skip statis, media, WebSocket
     const skipTypes = ['Image', 'Stylesheet', 'Script', 'Font', 'Media', 'WebSocket'];
     if (skipTypes.includes(type)) return false;
-    
+
     // Skip OPTIONS
     if (method === 'OPTIONS') return false;
-    
+
     // Deteksi jika ini API:
     // - Ada response JSON/XML
     // - URL mengandung api/graphql
     // - Ada request body JSON
     const mime = request.response?.mimeType || '';
     const postData = request.request.postData || '';
-    
+
     // Jika response MIME adalah JSON/XML, anggap API
     if (mime.includes('json') || mime.includes('xml')) return true;
-    
+
     // Jika URL mengandung api/graphql/rest, anggap API
-    if (url.includes('/api/') || url.includes('/graphql/') || 
-        url.includes('/rest/') || url.includes('api.') || 
-        url.includes('graphql.')) {
+    if (url.includes('/api/') || url.includes('/graphql/') ||
+      url.includes('/rest/') || url.includes('api.') ||
+      url.includes('graphql.')) {
       return true;
     }
-    
+
     // Jika ada postData dan bukan file upload, anggap API
     if (postData && typeof postData === 'string' && postData.length > 0) {
       // Coba parse JSON
@@ -126,7 +128,7 @@ function shouldCapture(request) {
         }
       }
     }
-    
+
     // Jika response bukan HTML dan ada header Accept JSON
     const headers = request.request.headers || [];
     for (const h of headers) {
@@ -136,7 +138,7 @@ function shouldCapture(request) {
         }
       }
     }
-    
+
     // Default: skip (anggap bukan API)
     return false;
   }
@@ -226,14 +228,14 @@ export function startCapture() {
     const url = request.request.url;
 
     if (
-        url.startsWith('chrome-extension://') ||
-        url.startsWith('chrome://') ||
-        url.startsWith('devtools://') ||
-        url.startsWith('blob:') ||
-        url.startsWith('data:') ||
-        url.startsWith('about:')
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('chrome://') ||
+      url.startsWith('devtools://') ||
+      url.startsWith('blob:') ||
+      url.startsWith('data:') ||
+      url.startsWith('about:')
     ) {
-        return;
+      return;
     }
 
     // Terapkan filter
@@ -270,7 +272,7 @@ export function startCapture() {
       responseBody = '';
     }
 
-    
+
     const respHeaders = {};
     request.response.headers.forEach(h => { respHeaders[h.name.toLowerCase()] = h.value; });
 
@@ -291,8 +293,16 @@ export function startCapture() {
 
     const securityFindings = analyzeSecurityHeaders(respHeaders);
 
+    const d = new Date();
+
+    const time = [
+      d.getHours().toString().padStart(2, "0"),
+      d.getMinutes().toString().padStart(2, "0"),
+      d.getSeconds().toString().padStart(2, "0"),
+    ].join(":");
+
     const log = {
-      time: new Date().toLocaleTimeString(),
+      time: time,
       url: request.request.url,
       status: request.response.status,
       statusText: request.response.statusText || '',
@@ -315,13 +325,13 @@ export function startCapture() {
         pii: sensitive.pii.types,
         secrets: sensitive.secrets.types
       },
-      securityFindings:securityFindings
+      securityFindings: securityFindings
     };
 
     logs.unshift(log);
     if (logs.length > 200) logs.pop();
     await saveLogs();
-    
+
     renderList();
 
     // if (selectedId === null) {
@@ -545,7 +555,7 @@ export async function sendRequest(idx) {
 
     const newIdx = idx + 1;
     logs.splice(newIdx, 0, newLog);
-    
+
     await saveLogs();
 
     setOriginalLogSnapshot(null); // clear snapshot

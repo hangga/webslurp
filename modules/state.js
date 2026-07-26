@@ -42,21 +42,12 @@ export const searchInput = document.getElementById('search');
 export const filterMethod = document.getElementById('filter-method');
 export const filterStatus = document.getElementById('filter-status');
 export const filterContent = document.getElementById('filter-content');
-// export const countBadge = document.getElementById('count-badge');
 export const statusText = document.getElementById('status-text');
 export const statusCount = document.getElementById('status-count');
 export const divider = document.getElementById('divider');
 
 // ── State untuk group expand ──
 export let expandedGroups = new Set();
-
-// export function toggleGroup(hostname) {
-//   if (expandedGroups.has(hostname)) {
-//     expandedGroups.delete(hostname);
-//   } else {
-//     expandedGroups.add(hostname);
-//   }
-// }
 
 export function isGroupExpanded(hostname) {
   return expandedGroups.has(hostname);

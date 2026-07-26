@@ -1,122 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brutu Suite</title>
-    <link rel="stylesheet" href="panel.css" />
-  </head>
-  <body>
-    <div id="search-bar">
-      <!-- Traffic -->
-      <button id="reload-btn" class="btn" title="Reload" style="padding:4px;">
-        <img src="icons/reload.png" class="btn-icon" id="btn-icon" title="Reload" />
-        <span id="btn-spinner" class="spinner" hidden></span>
-      </button>
-      <div class="actions">
-        <div class="theme-picker">
-          <img id="img-api" hidden src="icons/api.png" class="filter-icon" title="Filter" />
-          <img id="img-all" hidden src="icons/all.png" class="filter-icon" title="Filter" />
-          <img id="img-custom" hidden src="icons/filter.png" class="filter-icon" title="Filter" />
-          <select id="capture-mode">
-            <option value="api">API Only (Recomended)</option>
-            <option value="all">All Traffic --Unstable. Fixing soon.✌️☺️</option>
-            <option value="custom">Custom --Unstable. Fixing soon.✌️☺️</option>
-          </select>
-        </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brutu Suite</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+
+<body>
+  <div id="search-bar">
+    <!-- Traffic -->
+    <button id="reload-btn" class="btn" title="Reload" style="padding:4px;">
+      <img src="icons/reload.png" class="btn-icon" id="btn-icon" title="Reload" />
+      <span id="btn-spinner" class="spinner" hidden></span>
+    </button>
+    <div class="actions">
+      <div class="theme-picker">
+        <img id="img-api" hidden src="icons/api.png" class="filter-icon" title="Filter" />
+        <img id="img-all" hidden src="icons/all.png" class="filter-icon" title="Filter" />
+        <img id="img-custom" hidden src="icons/filter.png" class="filter-icon" title="Filter" />
+        <select id="capture-mode">
+          <option value="api">API Only (Recomended)</option>
+          <option value="all">All Traffic --Unstable. Fixing soon.✌️☺️</option>
+          <option value="custom">Custom --Unstable. Fixing soon.✌️☺️</option>
+        </select>
       </div>
-      <!-- Request Filter -->
-      <input id="search" type="text" placeholder="Search/ filter requests..." spellcheck="false" style="width: 300px;" />
-      <select id="filter-method" class="select">
-        <option value="">All Methods</option>
-        <option value="GET">GET</option>
-        <option value="POST">POST</option>
-        <option value="PUT">PUT</option>
-        <option value="DELETE">DELETE</option>
-        <option value="PATCH">PATCH</option>
-        <option value="HEAD">HEAD</option>
-        <option value="OPTIONS">OPTIONS</option>
-      </select>
-      <select id="filter-status" class="select">
-        <option value="">All Status</option>
-        <option value="2xx">2xx Success</option>
-        <option value="3xx">3xx Redirect</option>
-        <option value="4xx">4xx Client Error</option>
-        <option value="5xx">5xx Server Error</option>
-      </select>
-      <div style="width: 25%;"></div>
-
-      
-      <button class="btn" id="import-btn" title="Open from file">
-        <img src="icons/open-folder.png" class="btn-icon" title="Open from file" />
-      </button>
-      <button class="btn" id="export-btn" title="Save to file">
-        <img src="icons/save.png" class="btn-icon" title="Save to file" />
-      </button>
-      <button id="clear" class="btn" title="Clear All">
-        <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;" />
-      </button>
-      <button class="btn" id="timeout-btn" title="Set Timeout">
-        <img src="icons/stopwatch.png" class="btn-icon" title="Timeout" />
-      </button>
-      
-      <div class="actions">
-        <div class="theme-picker">
-          <img src="icons/theme.png" class="theme-icon" />
-          <select id="theme-select">
-            <option value="vscode-dark">VS Code Dark</option>
-            <option value="jetbrains-dark">JetBrains Dark</option>
-            <option value="one-dark">One Dark</option>
-            <option value="solarized-dark">Solarized Dark</option>
-            <option value="vscode-light">VS Code Light</option>
-            <option value="github-light">GitHub Light</option>
-            <option value="dracula">Dracula</option>
-            <option value="monokai">Monokai</option>
-            <option value="nord">Nord</option>
-            <option value="catppuccin">Catppuccin</option>
-            <option value="tokyo-night">Tokyo Night</option>
-            <option value="gruvbox">Gruvbox</option>
-            <option value="ayu-dark">Ayu Dark</option>
-            <option value="ayu-light">Ayu Light</option>
-            <option value="material-dark">Material Dark</option>
-            <option value="material-light">Material Light</option>
-            <option value="palenight">Palenight</option>
-            <option value="solarized-light">Solarized Light</option>
-          </select>
-        </div>
-      </div>
-
-      <button id="about-btn" class="btn" title="About">
-        <span id="about-version-btn"></span>
-      </button>
-
     </div>
-    <div></div>
-    <div id="split-view">
-      <div id="log-list">
-        <div id="custom-filters">
-          <label>
-            <input type="checkbox" id="filter-http-only" checked> HTTP/HTTPS only </label>
-          <label>
-            <input type="checkbox" id="filter-skip-options" checked> Skip OPTIONS </label>
-          <label>
-            <input type="checkbox" id="filter-skip-images" checked> Skip Images </label>
-          <label>
-            <input type="checkbox" id="filter-skip-css" checked> Skip CSS </label>
-          <label>
-            <input type="checkbox" id="filter-skip-js" checked> Skip JavaScript </label>
-          <label>
-            <input type="checkbox" id="filter-skip-fonts" checked> Skip Fonts </label>
-          <label>
-            <input type="checkbox" id="filter-skip-media" checked> Skip Media </label>
-          <label>
-            <input type="checkbox" id="filter-skip-websocket" checked> Skip WebSocket </label>
-        </div>
-        <!-- <div id="files"></div> -->
-        <div id="log-list-container"></div>
+    <!-- Request Filter -->
+    <input id="search" type="text" placeholder="Search/ filter requests..." spellcheck="false" style="width: 300px;" />
+    <select id="filter-method" class="select">
+      <option value="">All Methods</option>
+      <option value="GET">GET</option>
+      <option value="POST">POST</option>
+      <option value="PUT">PUT</option>
+      <option value="DELETE">DELETE</option>
+      <option value="PATCH">PATCH</option>
+      <option value="HEAD">HEAD</option>
+      <option value="OPTIONS">OPTIONS</option>
+    </select>
+    <select id="filter-status" class="select">
+      <option value="">All Status</option>
+      <option value="2xx">2xx Success</option>
+      <option value="3xx">3xx Redirect</option>
+      <option value="4xx">4xx Client Error</option>
+      <option value="5xx">5xx Server Error</option>
+    </select>
+    <div style="width: 25%;"></div>
+
+
+    <button class="btn" id="import-btn" title="Open from file">
+      <img src="icons/open-folder.png" class="btn-icon" title="Open from file" />
+    </button>
+    <button class="btn" id="export-btn" title="Save to file">
+      <img src="icons/save.png" class="btn-icon" title="Save to file" />
+    </button>
+    <button id="clear" class="btn" title="Clear All">
+      <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;" />
+    </button>
+    <button class="btn" id="timeout-btn" title="Set Timeout">
+      <img src="icons/stopwatch.png" class="btn-icon" title="Timeout" />
+    </button>
+
+    <div class="actions">
+      <div class="theme-picker">
+        <img src="icons/theme.png" class="theme-icon" />
+        <select id="theme-select">
+          <option value="vscode-dark">VS Code Dark</option>
+          <option value="jetbrains-dark">JetBrains Dark</option>
+          <option value="one-dark">One Dark</option>
+          <option value="solarized-dark">Solarized Dark</option>
+          <option value="vscode-light">VS Code Light</option>
+          <option value="github-light">GitHub Light</option>
+          <option value="dracula">Dracula</option>
+          <option value="monokai">Monokai</option>
+          <option value="nord">Nord</option>
+          <option value="catppuccin">Catppuccin</option>
+          <option value="tokyo-night">Tokyo Night</option>
+          <option value="gruvbox">Gruvbox</option>
+          <option value="ayu-dark">Ayu Dark</option>
+          <option value="ayu-light">Ayu Light</option>
+          <option value="material-dark">Material Dark</option>
+          <option value="material-light">Material Light</option>
+          <option value="palenight">Palenight</option>
+          <option value="solarized-light">Solarized Light</option>
+        </select>
       </div>
-      <div id="divider"></div>
-      <!-- <div id="detail-panel">
+    </div>
+
+    <button id="about-btn" class="btn" title="About"
+      style="border: 0.5px solid var(--accent-border); border-radius: 8px;">
+      <span id="about-version-btn"></span>
+    </button>
+
+  </div>
+  <div></div>
+  <div id="split-view">
+    <div id="log-list">
+      <div id="custom-filters">
+        <label>
+          <input type="checkbox" id="filter-http-only" checked> HTTP/HTTPS only </label>
+        <label>
+          <input type="checkbox" id="filter-skip-options" checked> Skip OPTIONS </label>
+        <label>
+          <input type="checkbox" id="filter-skip-images" checked> Skip Images </label>
+        <label>
+          <input type="checkbox" id="filter-skip-css" checked> Skip CSS </label>
+        <label>
+          <input type="checkbox" id="filter-skip-js" checked> Skip JavaScript </label>
+        <label>
+          <input type="checkbox" id="filter-skip-fonts" checked> Skip Fonts </label>
+        <label>
+          <input type="checkbox" id="filter-skip-media" checked> Skip Media </label>
+        <label>
+          <input type="checkbox" id="filter-skip-websocket" checked> Skip WebSocket </label>
+      </div>
+      <!-- <div id="files"></div> -->
+      <div id="log-list-container"></div>
+    </div>
+    <div id="divider"></div>
+    <!-- <div id="detail-panel">
         <div id="detail-empty">Select a request to view details</div>
         <div id="detail-content"></div>
         <div class="sticky-search" id="sticky-search" hidden>
@@ -125,155 +128,164 @@
           <button id="response-search-next" class="search-nav">▶</button>
         </div>
       </div> -->
-      
-      <div id="detail-panel">
-        <!-- <button id="notes-toggle-toolbar" class="btn primary" title="Toggle Notes">
+
+    <div id="detail-panel">
+      <!-- <button id="notes-toggle-toolbar" class="btn primary" title="Toggle Notes">
           <img src="icons/note.png" class="btn-icon" />
         </button> -->
-        <div id="detail-empty">Select a request to view details</div>
-        <div id="detail-wrapper">
-          <div id="detail-content"></div>
-          <div id="notes-divider" class="resize-handle" title="Drag to resize notes"></div>
-          <div id="notes-sidebar" class="collapsed">
-            <div class="notes-header">
-              <span>📝 Notes</span>
-              <button id="notes-toggle-btn" class="notes-toggle" title="Toggle notes panel">✕</button>
-            </div>
-            <textarea id="log-note-sidebar" placeholder="Add your note here..."></textarea>
+      <div id="detail-empty">Select a request to view details</div>
+      <div id="detail-wrapper">
+        <div id="detail-content"></div>
+        <div id="notes-divider" class="resize-handle" title="Drag to resize notes"></div>
+        <div id="notes-sidebar" class="collapsed">
+          <div class="notes-header">
+            <span>📝 Notes</span>
+            <button id="notes-toggle-btn" class="notes-toggle" title="Toggle notes panel">✕</button>
           </div>
-        </div>
-        <div class="sticky-search" id="sticky-search" hidden>
-          <input id="response-search" type="text" placeholder="Search response..." spellcheck="false" />
-          <button id="response-search-prev" class="search-nav">◀</button>
-          <button id="response-search-next" class="search-nav">▶</button>
+          <textarea id="log-note-sidebar" placeholder="Add your note here..."></textarea>
         </div>
       </div>
-    
-    </div>
-    <footer id="status-bar">
-      <span id="status-text">Listening…</span>
-      <span id="response-search-count"></span>
-      <span id="status-count">0 requests</span>
-      <div id="progress-container" hidden>
-        <div id="progress-bar" style="width:0%;"></div>
-      </div>
-    </footer>
-    <!-- Modal Konfirmasi Kustom -->
-    <div id="confirmModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-        <p id="confirmMessage" style="margin-top: 0; font-size: 16px; color: #333;"></p>
-        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
-          <button id="confirmNo" style="padding: 8px 20px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 6px; cursor: pointer;">Cancel</button>
-          <button id="confirmYes" style="padding: 8px 20px; border: none; background: #d32f2f; color: white; border-radius: 6px; cursor: pointer;">Delete All</button>
-        </div>
+      <div class="sticky-search" id="sticky-search" hidden>
+        <input id="response-search" type="text" placeholder="Search response..." spellcheck="false" />
+        <button id="response-search-prev" class="search-nav">◀</button>
+        <button id="response-search-next" class="search-nav">▶</button>
       </div>
     </div>
 
-    <!-- about modal -->
-     <!-- About Modal -->
-    <div id="aboutModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="background: #fff; padding: 24px; border-radius: 12px; max-width: 450px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; font-family: system-ui, sans-serif;">
+  </div>
+  <footer id="status-bar">
+    <span id="status-text">Listening…</span>
+    <span id="response-search-count"></span>
+    <span id="status-count">0 requests</span>
+    <div id="progress-container" hidden>
+      <div id="progress-bar" style="width:0%;"></div>
+    </div>
+  </footer>
+  <!-- Modal Konfirmasi Kustom -->
+  <div id="confirmModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div
+      style="background: white; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <p id="confirmMessage" style="margin-top: 0; font-size: 16px; color: #333;"></p>
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+        <button id="confirmNo"
+          style="padding: 8px 20px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 6px; cursor: pointer;">Cancel</button>
+        <button id="confirmYes"
+          style="padding: 8px 20px; border: none; background: #d32f2f; color: white; border-radius: 6px; cursor: pointer;">Delete
+          All</button>
+      </div>
+    </div>
+  </div>
 
-        <h2 style="margin-top:0; display:flex; align-items:center; gap:8px;">
-          <img src="logo-512.png" width="30">
-          WebSlurp
-        </h2>
+  <!-- about modal -->
+  <!-- About Modal -->
+  <div id="aboutModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div
+      style="background: #fff; padding: 24px; border-radius: 12px; max-width: 550px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; font-family: system-ui, sans-serif;">
 
-        <p><strong>Version</strong><br><span id="about-version">1.0.0</span></p>
+      <h2 style="margin-top:0; display:flex; align-items:center; gap:8px;">
+        <img src="images/logo-512.png" width="30">
+        WebSlurp
+      </h2>
 
-        <p>
-          <strong>What is it?</strong><br>
-          An open source DevTools extension for capturing, inspecting, replaying, and analyzing HTTP requests—without leaving your browser.
-        </p>
+      <p><strong>Version</strong><br><span id="about-version">1.0.0</span></p>
 
-        <p>
-          <strong>Created by</strong><br>
-          <a href="https://hangga.web.id" target="_blank">hangga.web.id</a>
-        </p>
+      <p>
+        <strong>What is it?</strong><br>
+        An open source DevTools extension for capturing, inspecting, replaying, and analyzing HTTP requests—without
+        leaving your browser.
+      </p>
 
-        <p>
-          <strong>Source code</strong><br>
-          <a href="https://github.com/hangga/webslurp" target="_blank">
-            github.com/hangga/webslurp
+      <p>
+        <strong>Created by</strong><br>
+        <a href="https://hangga.web.id" target="_blank">hangga.web.id</a>
+      </p>
+
+      <p>
+        <strong>Source code</strong><br>
+        <a href="https://github.com/hangga/webslurp" target="_blank">
+          github.com/hangga/webslurp
+        </a>
+      </p>
+
+      <p>
+        <strong>Easy Update</strong><br>
+      <p><code>git pull origin main</code></p>
+      </p>
+
+      <p><strong>License</strong><br>MIT</p>
+
+      <hr style="margin:16px 0;">
+
+      <p style="font-size:14px; color:#666; line-height:1.6;">
+        Thanks for using WebSlurp ❤️<br>
+        This project is powered by coffee. The coffee, unfortunately, is not open source. ☕ <br />
+        If WebSlurp has made your day a little easier, consider buying the next cup.
+      </p>
+
+
+      <div style="text-align:right; margin-top:16px;">
+
+        <div class="support-actions">
+          <a href="https://github.com/sponsors/hangga" target="_blank" class="btn-githubsponsor">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+            </svg>
+            GitHub Sponsor
           </a>
-        </p>
-
-        <p>
-          <strong>Easy Update</strong><br>
-          <p><code>git pull origin main</code></p>
-        </p>
-
-        <p><strong>License</strong><br>MIT</p>
-
-        <hr style="margin:16px 0;">
-
-        <p style="font-size:14px; color:#666; line-height:1.6;">
-          Thanks for using WebSlurp ❤️<br>
-          This project is powered by coffee. The coffee, unfortunately, is not open source. ☕ <br/>
-          If WebSlurp has made your day a little easier, consider buying the next cup.
-        </p>
-
-      
-        <div style="text-align:right; margin-top:16px;">
-
-          <div class="support-actions">
-              <a href="https://github.com/sponsors/hangga" target="_blank" class="btn-githubsponsor">
-                      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
-                          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                      </svg>
-                      GitHub Sponsor
-                  </a>
-                  <a href="https://paypal.me/hanggaajisayekti" target="_blank" class="btn-paypal">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                      <path d="M20.067 8.478c.492-.88.556-1.852.14-2.793-.42-.942-1.273-1.543-2.272-1.543H12.74c-.334 0-.612.23-.665.56L10.77 9.57l-.03.18c-.057.37-.37.63-.745.63H7.616c-.884 0-1.6.688-1.636 1.565L4.73 21.53c-.014.34.256.63.596.63h3.577c.373 0 .686-.258.744-.63l.314-2.02c.057-.37.37-.63.744-.63h1.83c3.746 0 6.697-1.472 7.514-5.07.244-1.07.136-2.014-.195-2.835-.368-.914-1.036-1.466-1.888-1.466h-2.69c-.494 0-.913-.342-.97-.826l-.075-.543c-.067-.475.28-.915.757-.915h2.3c.39 0 .752-.186.973-.5z"/>
-                      </svg>
-                      PayPal
-                  </a>
-          </div>
-          
-          <button id="aboutCloseBtn"
-                  style="padding:6px 20px; border:1px solid #ccc; background:#f5f5f5; border-radius:6px; cursor:pointer;">
-            Close
-          </button>
+          <a href="https://paypal.me/hanggaajisayekti" target="_blank" class="btn-paypal">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path
+                d="M20.067 8.478c.492-.88.556-1.852.14-2.793-.42-.942-1.273-1.543-2.272-1.543H12.74c-.334 0-.612.23-.665.56L10.77 9.57l-.03.18c-.057.37-.37.63-.745.63H7.616c-.884 0-1.6.688-1.636 1.565L4.73 21.53c-.014.34.256.63.596.63h3.577c.373 0 .686-.258.744-.63l.314-2.02c.057-.37.37-.63.744-.63h1.83c3.746 0 6.697-1.472 7.514-5.07.244-1.07.136-2.014-.195-2.835-.368-.914-1.036-1.466-1.888-1.466h-2.69c-.494 0-.913-.342-.97-.826l-.075-.543c-.067-.475.28-.915.757-.915h2.3c.39 0 .752-.186.973-.5z" />
+            </svg>
+            PayPal
+          </a>
         </div>
 
-        
+        <button id="aboutCloseBtn"
+          style="padding:6px 20px; border:1px solid #ccc; background:#f5f5f5; border-radius:6px; cursor:pointer;">
+          Close
+        </button>
+      </div>
 
+
+
+    </div>
+  </div>
+
+  <!-- Timeout Modal -->
+  <div id="timeoutModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div
+      style="background: #fff; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; font-family: system-ui, sans-serif;">
+
+      <h3 style="margin-top:0;">Request Timeout</h3>
+
+      <p style="margin: 12px 0 6px 0;">
+        Maximum time to wait for a response (ms)
+      </p>
+
+      <input type="number" id="timeout-input-modal" value="30000" min="1000" step="500"
+        style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:14px;" />
+
+      <p style="font-size:12px; color:#666; margin: 4px 0 12px 0;">
+        The request will be aborted if no response is received within this time.
+        Minimum: 1,000 ms • Default: 30,000 ms (30 s)
+      </p>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
+        <button id="timeoutCancelBtn"
+          style="padding: 8px 20px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 6px; cursor: pointer;">Cancel</button>
+        <button id="timeoutSaveBtn"
+          style="padding: 8px 20px; border: none; background: #007acc; color: white; border-radius: 6px; cursor: pointer;">Save</button>
       </div>
     </div>
-
-    <!-- Timeout Modal -->
-    <div id="timeoutModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="background: #fff; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; font-family: system-ui, sans-serif;">
-        
-        <h3 style="margin-top:0;">Request Timeout</h3>
-
-        <p style="margin: 12px 0 6px 0;">
-          Maximum time to wait for a response (ms)
-        </p>
-
-        <input
-          type="number"
-          id="timeout-input-modal"
-          value="30000"
-          min="1000"
-          step="500"
-          style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:14px;"
-        />
-
-        <p style="font-size:12px; color:#666; margin: 4px 0 12px 0;">
-          The request will be aborted if no response is received within this time.
-          Minimum: 1,000 ms • Default: 30,000 ms (30 s)
-        </p>
-
-        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-          <button id="timeoutCancelBtn" style="padding: 8px 20px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 6px; cursor: pointer;">Cancel</button>
-          <button id="timeoutSaveBtn" style="padding: 8px 20px; border: none; background: #007acc; color: white; border-radius: 6px; cursor: pointer;">Save</button>
-        </div>
-      </div>
-    </div>
+  </div>
 
 
-    <script type="module" src="panel.js"></script>
-  </body>
+  <script type="module" src="panel.js"></script>
+</body>
+
 </html>

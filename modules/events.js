@@ -281,33 +281,6 @@ export function attachSubtabEvents(idx) {
   // Pastikan delegation sudah aktif
   setupDetailDelegation();
 
-  // timeout
-  // const timeoutInput = document.getElementById('timeout-input');
-  // if (timeoutInput) {
-  //   timeoutInput.addEventListener('change', function() {
-  //     const val = parseInt(this.value, 10);
-  //     if (!isNaN(val) && val >= 1000) {
-  //       import('./network.js').then(module => {
-  //         module.updateTimeout(val);
-  //       });
-  //     } else {
-  //       this.value = timeoutMs; // revert
-  //       statusText.textContent = 'Invalid timeout';
-  //     }
-  //   });
-  // }
-
-
-  // notes
-  // const noteTextarea = document.getElementById('log-note-sidebar');
-  // if (noteTextarea) {
-  //   noteTextarea.value = log.note || '';
-  //   noteTextarea.addEventListener('blur', () => {
-  //     logs[idx].note = noteTextarea.value;
-  //     saveLogs();
-  //   });
-  // }
-
   let saveTimer;
 
   const noteTextarea = document.getElementById('log-note-sidebar');
@@ -428,8 +401,6 @@ export function attachSubtabEvents(idx) {
       renderDetail(idx);
     });
   });
-
-  // ── Event delegation untuk field (sudah ada di setupDetailDelegation, pastikan diaktifkan) ──
 
   // ── Auth ──
   const authType = document.getElementById('auth-type');
