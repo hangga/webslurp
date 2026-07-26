@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo-512.png" width="100" alt="WebSlurp Logo">
+  <img src="images/logo-512.png" width="100" alt="WebSlurp Logo">
 </p>
 
 # WebSlurp
@@ -18,11 +18,11 @@ It's the fastest way to inspect and replay HTTP requests when testing web applic
 
 Think **Burp-style request replay with a Postman-like interface**, built right into your browser.
 
-![screenshot1](screenshot/request.png)
+![screenshot1](images/request.png)
 
-![screenshot1](screenshot/params.png)
+![screenshot1](images/params.png)
 
-![screenshot1](screenshot/response.png)
+![screenshot1](images/response.png)
 
 [![Demo](preview.gif)](https://github.com/user-attachments/assets/74166d33-ee1f-4667-89a6-1c98f8ec1886)
 
@@ -33,7 +33,8 @@ Think **Burp-style request replay with a Postman-like interface**, built right i
 * Replay requests instantly
 * Filter by keyword, request method, or response status
 * Custom capture filters to skip images, CSS, and other static resources
-* Search inside response bodies
+* Add Notes
+* Search inside response
 * Copy requests as cURL
 * Save your work to a file
 * 18 light and dark themes
