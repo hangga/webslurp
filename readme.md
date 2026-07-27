@@ -18,11 +18,9 @@ It's the fastest way to inspect and replay HTTP requests when testing web applic
 
 Think **Burp-style request replay with a Postman-like interface**, built right into your browser.
 
-![screenshot1](images/request.png)
+![screenshot1](images/request-view.png)
 
-![screenshot1](images/params.png)
-
-![screenshot1](images/response.png)
+![screenshot1](images/response-view.png)
 
 [![Demo](preview.gif)](https://github.com/user-attachments/assets/74166d33-ee1f-4667-89a6-1c98f8ec1886)
 
