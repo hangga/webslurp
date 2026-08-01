@@ -4,7 +4,7 @@
 
 # WebSlurp
 
-![Version](https://img.shields.io/badge/version-1.8-blue)
+![Version](https://img.shields.io/badge/version-1.9-blue)
 ![Manifest](https://img.shields.io/badge/Manifest-V3-orange)
 ![Chrome](https://img.shields.io/badge/Chrome-DevTools-success)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -24,18 +24,50 @@ Think **Burp-style request replay with a Postman-like interface**, built right i
 
 [![Demo](preview.gif)](https://github.com/user-attachments/assets/74166d33-ee1f-4667-89a6-1c98f8ec1886)
 
-## Features
+## ✨ Features
 
-* Capture API requests or all URLs
-* Edit methods, parameters, headers, and request bodies
-* Replay requests instantly
-* Filter by keyword, request method, or response status
-* Custom capture filters to skip images, CSS, and other static resources
-* Add Notes
-* Search inside response
-* Copy requests as cURL
-* Save your work to a file
-* 18 light and dark themes
+- **Capture API requests or all URLs**  
+  Automatically intercept HTTP/HTTPS traffic from the inspected page, with smart filtering to focus on API calls or all resources.
+
+- **Edit methods, parameters, headers, and request bodies**  
+  Modify any aspect of a captured request before replaying it — change HTTP method, URL parameters, headers, and body content.
+
+- **Replay requests instantly**  
+  Send edited requests directly from the DevTools panel and see the response immediately.
+
+- **Filter by keyword, request method, or response status**  
+  Quickly narrow down the request list with flexible search and status‑code filters.
+
+- **Custom capture filters**  
+  Skip images, CSS, JavaScript, fonts, media, WebSocket, and OPTIONS requests to keep your view clean and focused.
+
+- **Add Notes**  
+  Attach custom notes to any request for documentation, collaboration, or personal reference.
+
+- **Search inside response**  
+  Highlight and navigate through text within the response body using the built‑in search.
+
+- **Copy requests as cURL**  
+  Export any request as a `curl` command for use in terminals or scripts.
+
+- **Save your work to a file**  
+  Export all logs (or filtered logs) as JSON, and import them later to continue your analysis.
+
+- **18 light and dark themes**  
+  Choose from 18 carefully crafted themes, including VS Code, JetBrains, One Dark, Solarized, Dracula, GitHub, and many more.
+
+- **Attack Surface Analysis** *(new)*  
+  Automatically evaluate the authorization and business logic attack surface of each endpoint, with scoring and actionable indicators to highlight potential security risks.
+
+### 🛡️ Attack Surface Analysis
+
+WebSlurp now includes a built‑in attack surface analyzer that examines each request’s URL path and query parameters to detect patterns that may indicate authorization flaws or business logic vulnerabilities. For each request, it provides:
+
+- **Authorization Potential Score** – based on presence of object identifiers, privileged paths, and ownership references.
+- **Business Logic Potential Score** – based on financial, workflow, or resource‑manipulation patterns.
+- **Actionable Indicators** – specific patterns found (e.g., numeric IDs, UUIDs, admin paths, quantity parameters) that may require manual security testing.
+
+This helps security testers and developers quickly identify high‑risk endpoints during dynamic analysis.
 
 ## A Shorter Workflow
 

@@ -6,7 +6,7 @@ import {
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs, saveSettings } from './storage.js';
 import { renderList, renderDetail } from './render.js';
-import { detectSensitiveData, detectAuth, analyzeSecurityHeaders } from './security.js';
+import { detectSensitiveData, detectAuth, analyzeSecurityHeaders, analyzeApplicationAttackSurface } from './security.js';
 
 // ── Helper deteksi tipe ──
 function detectType(request) {
@@ -293,6 +293,8 @@ export function startCapture() {
 
     const securityFindings = analyzeSecurityHeaders(respHeaders);
 
+    const attackSurface = analyzeApplicationAttackSurface(request.request.url);
+
     const d = new Date();
 
     const time = [
@@ -325,7 +327,8 @@ export function startCapture() {
         pii: sensitive.pii.types,
         secrets: sensitive.secrets.types
       },
-      securityFindings: securityFindings
+      securityFindings: securityFindings,
+      attackSurface: attackSurface
     };
 
     logs.unshift(log);
