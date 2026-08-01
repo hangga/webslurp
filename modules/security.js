@@ -988,3 +988,448 @@ export function analyzeSecurityHeaders(headers) {
 
   return findings;
 }
+
+export function analyzeApplicationAttackSurface(url) {
+
+  const u = new URL(url);
+
+  const path = u.pathname.toLowerCase();
+  const query = u.search.toLowerCase();
+
+  let authorizationScore = 0;
+  let businessLogicScore = 0;
+
+  const authorizationIndicators = [];
+  const businessLogicIndicators = [];
+
+
+  const patterns = {
+
+    authorization: {
+
+      sensitiveObjects: [
+        "user",
+        "users",
+        "account",
+        "accounts",
+        "profile",
+        "profiles",
+        "customer",
+        "customers",
+        "member",
+        "members",
+        "employee",
+        "employees",
+        "hacker",
+        "hackers",
+        "organization",
+        "organizations",
+        "tenant",
+        "tenants",
+        "workspace",
+        "workspaces",
+        "team",
+        "teams",
+        "project",
+        "projects",
+        "document",
+        "documents",
+        "file",
+        "files",
+        "order",
+        "orders",
+        "invoice",
+        "invoices"
+      ],
+
+
+      // New: identity aliases
+      identityAliases: [
+        "me",
+        "self",
+        "my",
+        "mine",
+        "current",
+        "current_user",
+        "current-user",
+        "logged_in_user"
+      ],
+
+
+      ownershipReferences: [
+        "userid",
+        "user_id",
+        "accountid",
+        "account_id",
+        "ownerid",
+        "owner_id",
+        "customerid",
+        "customer_id",
+        "tenantid",
+        "tenant_id",
+        "organizationid",
+        "organization_id"
+      ],
+
+
+      // New: user-owned resources
+      userDataObjects: [
+        "preferences",
+        "settings",
+        "configuration",
+        "notifications",
+        "subscriptions",
+        "unsubscription",
+        "privacy",
+        "security",
+        "credentials",
+        "sessions",
+        "devices"
+      ],
+
+
+      privilegedAreas: [
+        "admin",
+        "administrator",
+        "management",
+        "internal",
+        "staff",
+        "moderator",
+        "superuser"
+      ]
+
+    },
+
+
+    businessLogic: {
+
+      financial: [
+        "payment",
+        "payments",
+        "billing",
+        "balance",
+        "wallet",
+        "credit",
+        "refund",
+        "transaction",
+        "checkout",
+        "price"
+      ],
+
+
+      workflow: [
+        "approve",
+        "reject",
+        "verify",
+        "confirm",
+        "activate",
+        "enable",
+        "disable",
+        "publish",
+        "submit",
+        "redeem",
+        "claim",
+        "cancel",
+        "transfer"
+      ],
+
+
+      manipulationTargets: [
+        "quantity",
+        "amount",
+        "discount",
+        "coupon",
+        "voucher",
+        "limit",
+        "quota",
+        "stock",
+        "inventory"
+      ]
+
+    }
+
+  };
+
+
+
+  /*
+   * Object Identifier Detection
+   */
+
+  if (/\/\d+(\/|$)/.test(path)) {
+
+    authorizationScore += 20;
+
+    authorizationIndicators.push(
+      "Numeric object identifier pattern detected."
+    );
+  }
+
+
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+    .test(path)
+  ) {
+
+    authorizationScore += 20;
+
+    authorizationIndicators.push(
+      "UUID object identifier pattern detected."
+    );
+  }
+
+
+  if (
+    /\/[a-f0-9]{24}(\/|$)/i.test(path)
+  ) {
+
+    authorizationScore += 15;
+
+    authorizationIndicators.push(
+      "MongoDB ObjectId pattern detected."
+    );
+  }
+
+
+
+  /*
+   * Sensitive Object Detection
+   */
+
+  for (const item of patterns.authorization.sensitiveObjects) {
+
+    if (path.includes(item)) {
+
+      authorizationScore += 10;
+
+      authorizationIndicators.push(
+        `Sensitive object pattern detected: '${item}'.`
+      );
+
+    }
+  }
+
+
+
+  /*
+   * Identity Alias Detection
+   */
+
+  for (const item of patterns.authorization.identityAliases) {
+
+    if (path.includes(`/${item}`)) {
+
+      authorizationScore += 25;
+
+      authorizationIndicators.push(
+        `Identity alias pattern detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+
+  /*
+   * User Data Resource Detection
+   */
+
+  for (const item of patterns.authorization.userDataObjects) {
+
+    if (path.includes(item)) {
+
+      authorizationScore += 15;
+
+      authorizationIndicators.push(
+        `User-specific resource pattern detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+
+  /*
+   * Ownership Reference Detection
+   */
+
+  for (const item of patterns.authorization.ownershipReferences) {
+
+    if (
+      path.includes(item) ||
+      query.includes(item)
+    ) {
+
+      authorizationScore += 15;
+
+      authorizationIndicators.push(
+        `Ownership reference pattern detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+
+  /*
+   * Privileged Area Detection
+   */
+
+  for (const item of patterns.authorization.privilegedAreas) {
+
+    if (path.includes(item)) {
+
+      authorizationScore += 20;
+
+      authorizationIndicators.push(
+        `Privileged resource pattern detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+
+  /*
+   * Nested Resource Detection
+   */
+
+  const segments =
+    path.split("/")
+      .filter(Boolean);
+
+
+  if (segments.length >= 4) {
+
+    authorizationScore += 15;
+
+    authorizationIndicators.push(
+      "Nested resource relationship detected."
+    );
+
+  }
+
+
+
+  /*
+   * Business Logic Detection
+   */
+
+  for (const item of patterns.businessLogic.financial) {
+
+    if (path.includes(item)) {
+
+      businessLogicScore += 15;
+
+      businessLogicIndicators.push(
+        `Financial workflow object detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+  for (const item of patterns.businessLogic.workflow) {
+
+    if (path.includes(item)) {
+
+      businessLogicScore += 15;
+
+      businessLogicIndicators.push(
+        `Workflow transition pattern detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+  for (const item of patterns.businessLogic.manipulationTargets) {
+
+    if (
+      path.includes(item) ||
+      query.includes(item)
+    ) {
+
+      businessLogicScore += 20;
+
+      businessLogicIndicators.push(
+        `Manipulation target pattern detected: '${item}'.`
+      );
+
+    }
+
+  }
+
+
+
+  authorizationScore =
+    Math.min(authorizationScore, 100);
+
+  businessLogicScore =
+    Math.min(businessLogicScore, 100);
+
+
+
+  function getPotential(score) {
+
+    if (score >= 70)
+      return "HIGH";
+
+    if (score >= 40)
+      return "MEDIUM";
+
+    return "LOW";
+
+  }
+
+
+
+  return {
+
+    target: url,
+
+
+    authorizationAnalysis: {
+
+      potential:
+        getPotential(authorizationScore),
+
+      score:
+        authorizationScore,
+
+      indicators:
+        [...new Set(authorizationIndicators)]
+
+    },
+
+
+    businessLogicAnalysis: {
+
+      potential:
+        getPotential(businessLogicScore),
+
+      score:
+        businessLogicScore,
+
+      indicators:
+        [...new Set(businessLogicIndicators)]
+
+    },
+
+
+    note:
+      "This tool identifies patterns commonly associated with authorization and business logic testing. It does not confirm vulnerabilities.",
+
+
+    recommendation:
+      "Perform manual validation using different user contexts and workflow scenarios."
+
+  };
+
+}
