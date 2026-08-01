@@ -8,10 +8,17 @@ export async function refresh() {
   if (selectedId !== null && !logs[selectedId]) {
     setSelectedId(null);
   }
+  // if (selectedId !== null) {
+  //   renderDetail(selectedId);
+  // } else if (logs.length > 0) {
+  //   selectLog(0);
+  // } else {
+  //   detailEmpty.style.display = 'block';
+  //   detailContent.style.display = 'none';
+  // }
+
   if (selectedId !== null) {
     renderDetail(selectedId);
-  } else if (logs.length > 0) {
-    selectLog(0);
   } else {
     detailEmpty.style.display = 'block';
     detailContent.style.display = 'none';
