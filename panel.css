@@ -3455,3 +3455,83 @@ body {
   color: var(--text-secondary);
   font-style: italic;
 }
+
+/* ── ATTACK SURFACE BOX ── */
+.attack-surface-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-left-width: 4px;
+  border-left-color: var(--accent);
+  padding: 10px 14px;
+  margin: 8px 0 12px 0;
+  border-radius: 4px;
+}
+
+.attack-surface-box .as-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.attack-surface-box .as-summary {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.attack-surface-box .as-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.attack-surface-box .as-score {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.as-score.high {
+  background: #c62828;
+  color: #fff;
+}
+
+.as-score.medium {
+  background: #f9a825;
+  color: #000;
+}
+
+.as-score.low {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.attack-surface-box .as-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.attack-surface-box .as-indicator {
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+}
+
+.attack-surface-box .as-disclaimer {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}

@@ -454,6 +454,28 @@ export function renderDetail(idx) {
       html += `</div>`;
     }
 
+    // --- Attack Surface Analysis ---
+    if (log.attackSurface) {
+      const as = log.attackSurface;
+      html += `<div class="attack-surface-box">`;
+      html += `<div class="as-title">🎯 Attack Surface Analysis</div>`;
+      html += `<div class="as-summary">`;
+      html += `<div class="as-item"><span>Authorization Potential:</span> <span class="as-score ${as.authorizationAnalysis.potential.toLowerCase()}">${as.authorizationAnalysis.potential} (${as.authorizationAnalysis.score})</span></div>`;
+      html += `<div class="as-item"><span>Business Logic Potential:</span> <span class="as-score ${as.businessLogicAnalysis.potential.toLowerCase()}">${as.businessLogicAnalysis.potential} (${as.businessLogicAnalysis.score})</span></div>`;
+      html += `</div>`;
+      // Tampilkan indikator jika ada
+      const allIndicators = [...as.authorizationAnalysis.indicators, ...as.businessLogicAnalysis.indicators];
+      if (allIndicators.length) {
+        html += `<div class="as-indicators">`;
+        allIndicators.forEach(ind => {
+          html += `<span class="as-indicator">${escapeHtml(ind)}</span>`;
+        });
+        html += `</div>`;
+      }
+      html += `<div class="as-disclaimer">${escapeHtml(as.disclaimer)}</div>`;
+      html += `</div>`;
+    }
+
     const respHeaders = headersToArray(log.responseHeaders || {});
 
     // --- Buat teks lengkap response (status + headers + body) ---

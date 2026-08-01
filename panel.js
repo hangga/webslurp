@@ -186,7 +186,7 @@ chrome.storage.onChanged.addListener((changes, ns) => {
   await loadTimeoutSetting();
 
   startCapture();
-  statusText.textContent = 'Listening…';
+  // statusText.textContent = 'Listening…';
 
   initNotesResize();
 
