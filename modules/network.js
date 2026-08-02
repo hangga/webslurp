@@ -535,6 +535,14 @@ export async function sendRequest(idx) {
     const respHeaders = {};
     response.headers.forEach((v, k) => { respHeaders[k] = v; });
 
+    const d = new Date();
+
+    const time = [
+      d.getHours().toString().padStart(2, "0"),
+      d.getMinutes().toString().padStart(2, "0"),
+      d.getSeconds().toString().padStart(2, "0"),
+    ].join(":");
+
     const newLog = {
       ...logs[idx],
       url,
@@ -545,7 +553,7 @@ export async function sendRequest(idx) {
       responseHeaders: respHeaders,
       status: response.status,
       statusText: response.statusText,
-      time: new Date().toLocaleTimeString(),
+      time: time,
       sendStatus: response.ok ? 'success' : 'error',
       sendDuration: elapsed,
       mime: response.headers.get('content-type') || '',
@@ -661,4 +669,227 @@ export function copyAsCurl(idx) {
       document.body.removeChild(ta);
       statusText.textContent = 'cURL copied!';
     });
+}
+
+// ============================================================
+// RACE CONDITION TESTING
+// ============================================================
+
+/**
+ * Membangun fetch options dari data request (tanpa auth di header,
+ * auth akan diterapkan di sini).
+ */
+function buildFetchOptions(data) {
+  const { method, headers, body, bodyMode, formDataFields } = data;
+  const fetchHeaders = { ...headers };
+
+  let fetchOptions = { method, headers: fetchHeaders };
+
+  if (bodyMode === 'raw') {
+    const rawType = data.bodyRawType || 'text';
+    if (rawType === 'json' && !fetchHeaders['content-type'] && !fetchHeaders['Content-Type'])
+      fetchHeaders['Content-Type'] = 'application/json';
+    else if (rawType === 'xml' && !fetchHeaders['content-type'] && !fetchHeaders['Content-Type'])
+      fetchHeaders['Content-Type'] = 'application/xml';
+    if (body && method !== 'GET' && method !== 'HEAD')
+      fetchOptions.body = body;
+  } else if (bodyMode === 'form-data') {
+    const formData = new FormData();
+    (formDataFields || []).forEach(f => {
+      if (f.type === 'file') {
+        if (f.fileObj && f.fileObj instanceof File) formData.append(f.key, f.fileObj, f.fileObj.name);
+        else if (f.value) formData.append(f.key, f.value);
+      } else formData.append(f.key, f.value || '');
+    });
+    fetchOptions.body = formData;
+    delete fetchHeaders['Content-Type'];
+    delete fetchHeaders['content-type'];
+  } else if (bodyMode === 'x-www-form-urlencoded') {
+    const params = new URLSearchParams();
+    (formDataFields || []).forEach(f => { if (f.key) params.append(f.key, f.value || ''); });
+    fetchOptions.body = params.toString();
+    if (!fetchHeaders['content-type'] && !fetchHeaders['Content-Type'])
+      fetchHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+  }
+
+  if (method === 'GET' || method === 'HEAD') delete fetchOptions.body;
+  return fetchOptions;
+}
+
+/**
+ * Melakukan satu fetch tanpa efek samping ke state global.
+ * Mengembalikan object { ok, status, statusText, responseBody, respHeaders, elapsed, error }
+ */
+export async function performFetch(data) {
+  const { url } = data;
+  const fetchOptions = buildFetchOptions(data);
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const start = Date.now();
+
+  try {
+    const response = await fetch(url, { ...fetchOptions, signal });
+    const responseBody = await response.text();
+    const elapsed = Date.now() - start;
+    const respHeaders = {};
+    response.headers.forEach((v, k) => { respHeaders[k] = v; });
+    return {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      responseBody,
+      respHeaders,
+      elapsed,
+      error: null
+    };
+  } catch (err) {
+    const elapsed = Date.now() - start;
+    return {
+      ok: false,
+      status: 0,
+      statusText: '',
+      responseBody: '',
+      respHeaders: {},
+      elapsed,
+      error: err.message || 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Membuat objek log dari hasil fetch (sukses)
+ */
+function createLogFromResponse(requestData, fetchResult) {
+  const now = new Date();
+  const time = [
+    now.getHours().toString().padStart(2, '0'),
+    now.getMinutes().toString().padStart(2, '0'),
+    now.getSeconds().toString().padStart(2, '0'),
+  ].join(':');
+
+  const log = {
+    time,
+    url: requestData.url,
+    status: fetchResult.status,
+    statusText: fetchResult.statusText || '',
+    mime: fetchResult.respHeaders['content-type'] || '',
+    method: requestData.method || 'GET',
+    requestHeaders: requestData.headers || {},
+    requestBody: requestData.body || '',
+    response: fetchResult.responseBody,
+    responseHeaders: fetchResult.respHeaders,
+    note: '',
+    queryParams: requestData.queryParams || [],
+    bodyMode: requestData.bodyMode || 'none',
+    bodyRawType: requestData.bodyRawType || 'text',
+    category: 'api', // atau deteksi ulang
+    formDataFields: requestData.formDataFields || [],
+    auth: requestData.auth || { type: 'none' },
+    hasAuth: false,
+    hasSensitiveData: false,
+    sensitiveTypes: { pii: [], secrets: [] },
+    securityFindings: [],
+    sendStatus: fetchResult.ok ? 'success' : 'error',
+    sendDuration: fetchResult.elapsed,
+    sendError: fetchResult.error,
+    isRace: true,
+  };
+  // Opsional: deteksi kategori ulang
+  return log;
+}
+
+/**
+ * Membuat objek log dari hasil fetch (gagal/error)
+ */
+function createLogFromError(requestData, error) {
+  const now = new Date();
+  const time = [
+    now.getHours().toString().padStart(2, '0'),
+    now.getMinutes().toString().padStart(2, '0'),
+    now.getSeconds().toString().padStart(2, '0'),
+  ].join(':');
+
+  return {
+    time,
+    url: requestData.url,
+    status: 0,
+    statusText: 'Error',
+    mime: '',
+    method: requestData.method || 'GET',
+    requestHeaders: requestData.headers || {},
+    requestBody: requestData.body || '',
+    response: '',
+    responseHeaders: {},
+    note: '',
+    queryParams: requestData.queryParams || [],
+    bodyMode: requestData.bodyMode || 'none',
+    bodyRawType: requestData.bodyRawType || 'text',
+    category: 'api',
+    formDataFields: requestData.formDataFields || [],
+    auth: requestData.auth || { type: 'none' },
+    hasAuth: false,
+    hasSensitiveData: false,
+    sensitiveTypes: { pii: [], secrets: [] },
+    securityFindings: [],
+    sendStatus: 'error',
+    sendDuration: 0,
+    sendError: error.message || 'Request failed',
+    isRace: true,
+  };
+}
+
+/**
+ * Mengirim beberapa request paralel (race condition test)
+ */
+export async function sendParallelRequest(idx, count = 3) {
+  if (sendingId !== null) {
+    statusText.textContent = 'Another request is in progress';
+    return;
+  }
+
+  const data = getCurrentRequestData(idx);
+  if (!data) return;
+
+  // Pastikan URL valid
+  data.url = ensureValidUrl(data.url);
+
+  // Terapkan auth ke headers
+  const auth = data.auth || { type: 'none' };
+  data.headers = applyAuthToHeaders(data.headers || {}, auth);
+  data.headers = cleanHeaders(data.headers);
+
+  statusText.textContent = `Sending ${count} parallel requests...`;
+
+  const promises = [];
+  for (let i = 0; i < count; i++) {
+    // Clone data agar tidak saling mempengaruhi (jika ada referensi objek)
+    const dataClone = structuredClone(data);
+    promises.push(performFetch(dataClone));
+  }
+
+  const results = await Promise.allSettled(promises);
+
+  const newLogs = [];
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      const log = createLogFromResponse(data, result.value);
+      log.note = `Race #${i+1}`;
+      newLogs.push(log);
+    } else {
+      const log = createLogFromError(data, result.reason || new Error('Unknown error'));
+      log.note = `Race #${i+1} (error)`;
+      newLogs.push(log);
+    }
+  });
+
+  // Tambahkan ke logs (di depan)
+  logs.unshift(...newLogs);
+  await saveLogs();
+
+  renderList();
+  setSelectedId(0);
+  renderDetail(0);
+
+  const successCount = newLogs.filter(l => l.sendStatus === 'success').length;
+  statusText.textContent = `Race completed: ${successCount}/${count} succeeded`;
 }

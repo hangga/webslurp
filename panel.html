@@ -59,7 +59,7 @@
       <img src="icons/clear.png" title="Clear All" class="btn-icon" style="padding-bottom:1px;" />
     </button>
     <button class="btn" id="timeout-btn" title="Set Timeout">
-      <img src="icons/stopwatch.png" class="btn-icon" title="Timeout" />
+      <img src="icons/settings.png" class="btn-icon" title="Timeout" />
     </button>
 
     <div class="actions">
@@ -261,19 +261,32 @@
     <div
       style="background: #fff; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; font-family: system-ui, sans-serif;">
 
-      <h3 style="margin-top:0;">Request Timeout</h3>
+      <h3 style="margin-top:0;">Settings</h3>
 
       <p style="margin: 12px 0 6px 0;">
-        Maximum time to wait for a response (ms)
+        Request Timeout (ms)
       </p>
 
       <input type="number" id="timeout-input-modal" value="30000" min="1000" step="500"
         style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:14px;" />
 
       <p style="font-size:12px; color:#666; margin: 4px 0 12px 0;">
-        The request will be aborted if no response is received within this time.
+        Maximum time to wait before aborting a request.
         Minimum: 1,000 ms • Default: 30,000 ms (30 s)
       </p>
+
+      <div style="margin-top:12px;">
+        <label style="display:block; font-size:13px; margin-bottom:4px;">
+          Race Condition Request Count
+        </label>
+
+        <input type="number" id="race-count-modal" value="3" min="2" max="10"
+          style="width:80px; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:14px;" />
+
+        <p style="font-size:12px; color:#666; margin-top:2px;">
+          Number of parallel requests sent during a race condition test.
+        </p>
+      </div>
 
       <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
         <button id="timeoutCancelBtn"

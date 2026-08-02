@@ -2,7 +2,7 @@
 import {
   logs, selectedId, sendingId, activeTab, activeSubTab, setSelectedId, setActiveTab,
   setActiveSubTab, logListContainer, detailEmpty, detailContent, statusText, statusCount,
-  expandedGroups, toggleGroup, MAX_LOGS, timeoutMs, setOriginalLogSnapshot
+  expandedGroups, toggleGroup, MAX_LOGS, timeoutMs, setOriginalLogSnapshot, raceCount
 }
   from './state.js';
 import {
@@ -366,6 +366,7 @@ export function renderDetail(idx) {
     <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
     <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
     <div class="detail-tabs-actions">
+      <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
       <button id="notes-toggle-detail" class="notes-toggle-btn" title="Toggle notes panel">
         <img src="icons/notes.png" class="btn-icon" title="Open from file" />
       </button>
@@ -385,7 +386,8 @@ export function renderDetail(idx) {
         ${isSending ? '⏳ Sending...' : '▶ Send'}
       </button>
       ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
-      <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
+      <button class="btn btn-race" id="action-race">⚡ Race (${raceCount})</button>
+    
     </div>
   `;
 

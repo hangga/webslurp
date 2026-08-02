@@ -4,9 +4,10 @@ import {
   setSelectedId, setSendingId, setActiveTab, setActiveSubTab, ignoreStorageChange,
   setIgnoreStorageChange, logListEl, detailEmpty, detailContent, searchInput, filterMethod,
   filterStatus, statusText, statusCount, divider, MAX_LOGS, theme, setTheme, captureFilter,
-  timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting
+  timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting, raceCount, setRaceCount
 } from './modules/state.js';
-import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, importLogsFromFile } from './modules/storage.js';
+import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, 
+  importLogsFromFile, saveSettings, loadSettings } from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
 import { startCapture } from './modules/network.js';
@@ -130,12 +131,14 @@ document.getElementById('clear').onclick = async () => {
 const timeoutBtn = document.getElementById('timeout-btn');
 const timeoutModal = document.getElementById('timeoutModal');
 const timeoutInputModal = document.getElementById('timeout-input-modal');
+const raceInputMOdal = document.getElementById('race-count-modal');
 const timeoutSaveBtn = document.getElementById('timeoutSaveBtn');
 const timeoutCancelBtn = document.getElementById('timeoutCancelBtn');
 
 function openTimeoutModal() {
   timeoutInputModal.value = timeoutMs; // dari state
   timeoutModal.style.display = 'flex';
+  raceInputMOdal.value = raceCount;
 }
 
 function closeTimeoutModal() {
@@ -151,17 +154,44 @@ if (timeoutCancelBtn) {
 }
 
 if (timeoutSaveBtn) {
+  // timeoutSaveBtn.addEventListener('click', () => {
+  //   const val = parseInt(timeoutInputModal.value, 10);
+  //   if (isNaN(val) || val < 1000) {
+  //     statusText.textContent = 'Timeout must be at least 1000ms';
+  //     return;
+  //   }
+  //   setTimeoutMs(val);
+  //   saveTimeoutSetting();
+  //   statusText.textContent = `Timeout set to ${val}ms`;
+  //   closeTimeoutModal();
+  // });
   timeoutSaveBtn.addEventListener('click', () => {
-    const val = parseInt(timeoutInputModal.value, 10);
-    if (isNaN(val) || val < 1000) {
+    const timeoutVal = parseInt(timeoutInputModal.value, 10);
+    const raceVal = parseInt(document.getElementById('race-count-modal').value, 10);
+
+    if (isNaN(timeoutVal) || timeoutVal < 1000) {
       statusText.textContent = 'Timeout must be at least 1000ms';
       return;
     }
-    setTimeoutMs(val);
-    saveTimeoutSetting();
-    statusText.textContent = `Timeout set to ${val}ms`;
+    if (isNaN(raceVal) || raceVal < 2 || raceVal > 10) {
+      statusText.textContent = 'Race count must be between 2 and 10';
+      return;
+    }
+
+    setTimeoutMs(timeoutVal);
+    setRaceCount(raceVal);
+    saveSettings({ timeoutMs: timeoutVal, raceCount: raceVal });
+    updateRaceButtonLabel(); // update tombol di detail jika terbuka
+    statusText.textContent = `Timeout set to ${timeoutVal}ms, Race count set to ${raceVal}`;
     closeTimeoutModal();
   });
+}
+
+function updateRaceButtonLabel() {
+  const raceBtn = document.getElementById('action-race');
+  if (raceBtn) {
+    raceBtn.textContent = `Race (${raceCount})`;
+  }
 }
 
 // Tutup modal jika klik di luar konten
@@ -190,6 +220,11 @@ chrome.storage.onChanged.addListener((changes, ns) => {
 
   initNotesResize();
 
+  const settings = await loadSettings();
+  if (settings && typeof settings.raceCount === 'number') {
+    setRaceCount(settings.raceCount);
+  }
+
   const currentVersion = chrome.runtime.getManifest().version;
 
   document.getElementById('about-version-btn').textContent = `v${currentVersion}`;
@@ -202,6 +237,7 @@ chrome.storage.onChanged.addListener((changes, ns) => {
         `v${latest.version} is available. Update now 🚀`;
     }
   }
+
 })();
 
 
