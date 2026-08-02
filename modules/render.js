@@ -386,6 +386,8 @@ export function renderDetail(idx) {
       </button>
       ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
       <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
+      <button class="btn btn-race" id="action-race">⚡ Race</button>
+    <input type="number" id="race-count" value="3" min="2" max="10" style="width:48px; padding:2px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:4px; color:var(--text-primary);" />
     </div>
   `;
 
