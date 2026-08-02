@@ -535,6 +535,14 @@ export async function sendRequest(idx) {
     const respHeaders = {};
     response.headers.forEach((v, k) => { respHeaders[k] = v; });
 
+    const d = new Date();
+
+    const time = [
+      d.getHours().toString().padStart(2, "0"),
+      d.getMinutes().toString().padStart(2, "0"),
+      d.getSeconds().toString().padStart(2, "0"),
+    ].join(":");
+
     const newLog = {
       ...logs[idx],
       url,
@@ -545,7 +553,7 @@ export async function sendRequest(idx) {
       responseHeaders: respHeaders,
       status: response.status,
       statusText: response.statusText,
-      time: new Date().toLocaleTimeString(),
+      time: time,
       sendStatus: response.ok ? 'success' : 'error',
       sendDuration: elapsed,
       mime: response.headers.get('content-type') || '',

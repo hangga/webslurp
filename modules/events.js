@@ -1,5 +1,5 @@
 // events.js
-import { logs, selectedId, activeSubTab, setActiveSubTab, statusText } from './state.js';
+import { logs, selectedId, activeSubTab, setActiveSubTab, statusText, raceCount } from './state.js';
 import { escapeHtml, headersToObject, buildUrlWithParams, parseMultipartFormData } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderDetail } from './render.js';
@@ -298,9 +298,7 @@ export function attachSubtabEvents(idx) {
   const raceBtn = document.getElementById('action-race');
   if (raceBtn) {
     raceBtn.addEventListener('click', () => {
-      const countInput = document.getElementById('race-count');
-      const count = parseInt(countInput?.value || 3, 10);
-      sendParallelRequest(idx, Math.min(Math.max(count, 2), 10));
+      sendParallelRequest(idx, raceCount);
     });
   }
 
