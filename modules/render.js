@@ -388,6 +388,7 @@ export function renderDetail(idx) {
       </button>
       ${isSending ? `<button class="btn btn-cancel" id="action-cancel">✕ Cancel</button>` : ''}
       <button class="btn btn-race" id="action-race">⚡ Race (${raceCount})</button>
+      <button class="btn btn-fuzz" id="action-fuzz">🧪 Fuzz</button>
     
     </div>
   `;

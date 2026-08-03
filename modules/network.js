@@ -1,7 +1,9 @@
 import {
   logs, selectedId, sendingId, activeTab, setSendingId, setSelectedId, setActiveTab, statusText, captureFilter,
   abortController, cancelRequested, timeoutId, timeoutMs,
-  setAbortController, setCancelRequested, setTimeoutId, originalLogSnapshot, setOriginalLogSnapshot
+  setAbortController, setCancelRequested, setTimeoutId, originalLogSnapshot, setOriginalLogSnapshot,
+  fuzzingInProgress, setFuzzingInProgress, fuzzingResults, setFuzzingResults,
+  fuzzingTotal, setFuzzingTotal, fuzzingDone, setFuzzingDone
 } from './state.js';
 import { escapeHtml, headersToObject, ensureValidUrl, cleanHeaders, detectCategory } from './helpers.js';
 import { saveLogs, saveSettings } from './storage.js';
@@ -893,3 +895,341 @@ export async function sendParallelRequest(idx, count = 3) {
   const successCount = newLogs.filter(l => l.sendStatus === 'success').length;
   statusText.textContent = `Race completed: ${successCount}/${count} succeeded`;
 }
+
+export async function startFuzzing(target, name, payloads, concurrency = 1) {
+  if (fuzzingInProgress) {
+    statusText.textContent = 'Fuzzing already in progress';
+    return;
+  }
+
+  const idx = selectedId;
+  if (idx === null || !logs[idx]) {
+    statusText.textContent = 'No request selected';
+    return;
+  }
+
+  const baseData = getCurrentRequestData(idx);
+  if (!baseData) return;
+
+  const base = structuredClone(baseData);
+  base.url = ensureValidUrl(base.url);
+  const auth = base.auth || { type: 'none' };
+  base.headers = applyAuthToHeaders(base.headers || {}, auth);
+  base.headers = cleanHeaders(base.headers);
+
+  const payloadsArray = [...payloads];
+  if (payloadsArray.length === 0) {
+    statusText.textContent = 'No payloads to fuzz';
+    return;
+  }
+
+  setFuzzingInProgress(true);
+  setFuzzingResults([]);
+  setFuzzingTotal(payloadsArray.length);
+  setFuzzingDone(0);
+
+  // --- Ambil baseline (request tanpa payload atau dengan payload kosong) ---
+  let baseline = null;
+  try {
+    const baseReq = structuredClone(base);
+    // Untuk baseline, kita kosongkan payload (untuk param, hapus parameter; untuk header, set value kosong)
+    if (target === 'param') {
+      const urlObj = new URL(baseReq.url);
+      urlObj.searchParams.delete(name);
+      baseReq.url = urlObj.toString();
+    } else {
+      delete baseReq.headers[name];
+    }
+    baseline = await performFetch(baseReq);
+  } catch (_) {
+    // Jika baseline gagal, kita lanjutkan tanpa baseline
+    baseline = null;
+  }
+
+  const results = [];
+  const total = payloadsArray.length;
+
+  async function runOne(payload, index) {
+    const req = structuredClone(base);
+    if (target === 'param') {
+      const urlObj = new URL(req.url);
+      urlObj.searchParams.set(name, payload);
+      req.url = urlObj.toString();
+    } else if (target === 'header') {
+      req.headers[name] = payload;
+    }
+    const result = await performFetch(req);
+    results.push({
+      payload,
+      index,
+      ...result
+    });
+    const done = results.length;
+    setFuzzingDone(done);
+    statusText.textContent = `Fuzzing: ${done}/${total} completed (${Math.round(done/total*100)}%)`;
+  }
+
+  // Eksekusi chunk
+  const chunks = [];
+  for (let i = 0; i < total; i += concurrency) {
+    chunks.push(payloadsArray.slice(i, i + concurrency));
+  }
+
+  for (const chunk of chunks) {
+    const promises = chunk.map((payload, idx) => runOne(payload, idx));
+    await Promise.allSettled(promises);
+  }
+
+  setFuzzingInProgress(false);
+
+  // --- Filter hasil ---
+  // Kriteria: status 2xx, atau response berbeda signifikan dari baseline (misal length berbeda > 20%, atau mengandung kata tertentu)
+  const filtered = [];
+  const baselineLength = baseline ? baseline.responseBody?.length || 0 : 0;
+  const baselineStatus = baseline ? baseline.status : 0;
+
+  for (const r of results) {
+    let interesting = false;
+    const status = r.status || 0;
+    const body = r.responseBody || '';
+    const length = body.length;
+
+    // 1. Status 2xx
+    if (status >= 200 && status < 300) {
+      interesting = true;
+    }
+    // 2. Status berbeda dari baseline (misal 4xx/5xx) tapi kita skip karena biasanya error
+    // 3. Panjang response berbeda signifikan (misal > 30% dari baseline atau > 500 bytes)
+    if (!interesting && baselineLength > 0) {
+      const diffRatio = Math.abs(length - baselineLength) / baselineLength;
+      if (diffRatio > 0.3) {
+        interesting = true;
+      }
+    }
+    // 4. Bisa tambahkan regex detection untuk RCE, SQL error, dll
+    // Misal deteksi error SQL: "SQL syntax", "mysql_fetch", dll
+    const errorPatterns = [
+      'SQL syntax',
+      'mysql_fetch',
+      'ORA-',
+      'PostgreSQL',
+      'SQLite',
+      'Unclosed quotation mark',
+      'You have an error in your SQL syntax'
+    ];
+    if (errorPatterns.some(pattern => body.toLowerCase().includes(pattern.toLowerCase()))) {
+      interesting = true;
+    }
+    // 5. Deteksi path traversal: "root:", "etc/passwd", "win.ini"
+    const pathPatterns = ['root:', 'etc/passwd', 'win.ini', 'boot.ini'];
+    if (pathPatterns.some(pattern => body.includes(pattern))) {
+      interesting = true;
+    }
+
+    if (interesting) {
+      filtered.push(r);
+    }
+  }
+
+  // --- Tambahkan hasil yang difilter ke logs ---
+  if (filtered.length === 0) {
+    statusText.textContent = `Fuzzing completed: ${total} requests, no interesting findings.`;
+    return;
+  }
+
+  const newLogs = filtered.map((r, i) => {
+    const now = new Date();
+    const time = [
+      now.getHours().toString().padStart(2, '0'),
+      now.getMinutes().toString().padStart(2, '0'),
+      now.getSeconds().toString().padStart(2, '0'),
+    ].join(':');
+    return {
+      time,
+      url: r.url || base.url,
+      status: r.status || 0,
+      statusText: r.statusText || '',
+      mime: r.respHeaders?.['content-type'] || '',
+      method: base.method || 'GET',
+      requestHeaders: base.headers || {},
+      requestBody: base.body || '',
+      response: r.responseBody || '',
+      responseHeaders: r.respHeaders || {},
+      note: `Fuzz #${i+1} (${r.payload})`,
+      queryParams: base.queryParams || [],
+      bodyMode: base.bodyMode || 'none',
+      bodyRawType: base.bodyRawType || 'text',
+      category: 'api',
+      formDataFields: base.formDataFields || [],
+      auth: base.auth || { type: 'none' },
+      hasAuth: false,
+      hasSensitiveData: false,
+      sensitiveTypes: { pii: [], secrets: [] },
+      securityFindings: [],
+      sendStatus: r.ok ? 'success' : 'error',
+      sendDuration: r.elapsed || 0,
+      sendError: r.error || null,
+      isFuzz: true,
+      fuzzPayload: r.payload,
+    };
+  });
+
+  logs.unshift(...newLogs);
+  await saveLogs();
+
+  renderList();
+  setSelectedId(0);
+  renderDetail(0);
+
+  const statusSummary = filtered.reduce((acc, r) => {
+    const code = r.status || 0;
+    acc[code] = (acc[code] || 0) + 1;
+    return acc;
+  }, {});
+  const summaryStr = Object.entries(statusSummary)
+    .map(([code, count]) => `${code}: ${count}`)
+    .join(', ');
+
+  statusText.textContent = `Fuzzing done: ${filtered.length} interesting findings (${total} total). Status: ${summaryStr}`;
+}
+
+// export async function startFuzzing(target, name, payloads, concurrency = 1) {
+//   if (fuzzingInProgress) {
+//     statusText.textContent = 'Fuzzing already in progress';
+//     return;
+//   }
+
+//   const idx = selectedId;
+//   if (idx === null || !logs[idx]) {
+//     statusText.textContent = 'No request selected';
+//     return;
+//   }
+
+//   const baseData = getCurrentRequestData(idx);
+//   if (!baseData) return;
+
+//   // Clone agar tidak mengubah original
+//   const base = structuredClone(baseData);
+//   base.url = ensureValidUrl(base.url);
+//   // Terapkan auth
+//   const auth = base.auth || { type: 'none' };
+//   base.headers = applyAuthToHeaders(base.headers || {}, auth);
+//   base.headers = cleanHeaders(base.headers);
+
+//   // Siapkan payloads
+//   const payloadsArray = [...payloads];
+//   if (payloadsArray.length === 0) {
+//     statusText.textContent = 'No payloads to fuzz';
+//     return;
+//   }
+
+//   setFuzzingInProgress(true);
+//   setFuzzingResults([]);
+//   setFuzzingTotal(payloadsArray.length);
+//   setFuzzingDone(0);
+
+//   const results = [];
+//   const total = payloadsArray.length;
+
+//   // Fungsi untuk menjalankan satu payload
+//   async function runOne(payload, index) {
+//     const req = structuredClone(base);
+//     // Modifikasi target
+//     if (target === 'param') {
+//       // Tambahkan/ubah query parameter
+//       const urlObj = new URL(req.url);
+//       urlObj.searchParams.set(name, payload);
+//       req.url = urlObj.toString();
+//     } else if (target === 'header') {
+//       req.headers[name] = payload;
+//     }
+
+//     const result = await performFetch(req);
+//     results.push({
+//       payload,
+//       index,
+//       ...result
+//     });
+
+//     // Update progress
+//     const done = results.length;
+//     setFuzzingDone(done);
+//     statusText.textContent = `Fuzzing: ${done}/${total} completed (${Math.round(done/total*100)}%)`;
+//   }
+
+//   // Eksekusi dengan concurrency
+//   const chunks = [];
+//   for (let i = 0; i < total; i += concurrency) {
+//     chunks.push(payloadsArray.slice(i, i + concurrency));
+//   }
+
+//   for (const chunk of chunks) {
+//     const promises = chunk.map((payload, idx) => runOne(payload, idx));
+//     await Promise.allSettled(promises);
+//   }
+
+//   // Selesai
+//   setFuzzingInProgress(false);
+
+//   // Analisis hasil
+//   const successCount = results.filter(r => r.ok).length;
+//   const errorCount = results.filter(r => !r.ok && r.status === 0).length;
+//   const statusGroups = {};
+//   results.forEach(r => {
+//     const key = r.status || 0;
+//     if (!statusGroups[key]) statusGroups[key] = 0;
+//     statusGroups[key]++;
+//   });
+//   const statusSummary = Object.entries(statusGroups)
+//     .map(([code, count]) => `${code}: ${count}`)
+//     .join(', ');
+
+//   // Tambahkan hasil ke logs (sebagai log baru)
+//   const newLogs = results.map((r, i) => {
+//     const now = new Date();
+//     const time = [
+//       now.getHours().toString().padStart(2, '0'),
+//       now.getMinutes().toString().padStart(2, '0'),
+//       now.getSeconds().toString().padStart(2, '0'),
+//     ].join(':');
+//     return {
+//       time,
+//       url: r.url || base.url,
+//       status: r.status || 0,
+//       statusText: r.statusText || '',
+//       mime: r.respHeaders?.['content-type'] || '',
+//       method: base.method || 'GET',
+//       requestHeaders: base.headers || {},
+//       requestBody: base.body || '',
+//       response: r.responseBody || '',
+//       responseHeaders: r.respHeaders || {},
+//       note: `Fuzz #${i+1} (${r.payload})`,
+//       queryParams: base.queryParams || [],
+//       bodyMode: base.bodyMode || 'none',
+//       bodyRawType: base.bodyRawType || 'text',
+//       category: 'api',
+//       formDataFields: base.formDataFields || [],
+//       auth: base.auth || { type: 'none' },
+//       hasAuth: false,
+//       hasSensitiveData: false,
+//       sensitiveTypes: { pii: [], secrets: [] },
+//       securityFindings: [],
+//       sendStatus: r.ok ? 'success' : 'error',
+//       sendDuration: r.elapsed || 0,
+//       sendError: r.error || null,
+//       isFuzz: true,
+//       fuzzPayload: r.payload,
+//     };
+//   });
+
+//   // Masukkan ke logs
+//   logs.unshift(...newLogs);
+//   await saveLogs();
+
+//   // Render sekali
+//   renderList();
+//   setSelectedId(0);
+//   renderDetail(0);
+
+//   statusText.textContent = `Fuzzing completed: ${total} requests, ${successCount} succeeded, ${errorCount} errors. Status: ${statusSummary}`;
+// }

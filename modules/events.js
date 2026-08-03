@@ -7,6 +7,8 @@ import { sendParallelRequest } from './network.js'
 
 let detailDelegationActive = false;
 
+
+
 // ── Setup delegation pada detailContent ──
 export function setupDetailDelegation() {
   const detailContent = document.getElementById('detail-content');
@@ -14,7 +16,7 @@ export function setupDetailDelegation() {
   if (detailDelegationActive) return;
 
   // --- Delegasi untuk input di params, headers, form, urlencoded ---
-  detailContent.addEventListener('input', function(e) {
+  detailContent.addEventListener('input', function (e) {
     const target = e.target;
     const log = getCurrentLog();
     if (!log) return;
@@ -42,7 +44,7 @@ export function setupDetailDelegation() {
   });
 
   // --- Delegasi untuk klik tombol add/remove ---
-  detailContent.addEventListener('click', function(e) {
+  detailContent.addEventListener('click', function (e) {
     const target = e.target;
     const log = getCurrentLog();
     if (!log) return;
@@ -115,7 +117,7 @@ export function setupDetailDelegation() {
   // events.js – tambahkan di dalam setupDetailDelegation, setelah listener click
 
   // Delegasi untuk perubahan type (text/file)
-  detailContent.addEventListener('change', function(e) {
+  detailContent.addEventListener('change', function (e) {
     const target = e.target;
     if (target.classList.contains('form-type')) {
       const row = target.closest('.form-row');
@@ -295,6 +297,16 @@ export function attachSubtabEvents(idx) {
     };
   }
 
+  const fuzzBtn = document.getElementById('action-fuzz');
+  if (fuzzBtn) {
+    fuzzBtn.addEventListener('click', () => {
+      // Buka modal
+      if (typeof window.openFuzzModal === 'function') {
+        window.openFuzzModal();
+      }
+    });
+  }
+
   const raceBtn = document.getElementById('action-race');
   if (raceBtn) {
     raceBtn.addEventListener('click', () => {
@@ -377,7 +389,7 @@ export function attachSubtabEvents(idx) {
   // ── Body Mode (radio) ──
   const radioButtons = document.querySelectorAll('input[name="body-mode"]');
   radioButtons.forEach(radio => {
-    radio.addEventListener('change', function() {
+    radio.addEventListener('change', function () {
       if (!this.checked) return;
       const newMode = this.value;
       log.bodyMode = newMode;
@@ -402,7 +414,7 @@ export function attachSubtabEvents(idx) {
             fields.push({ key, value });
           }
           log.formDataFields = fields;
-        } catch (_) {}
+        } catch (_) { }
       }
       // Jika pindah ke raw, set requestBody dari form data? optional
       saveLogs();

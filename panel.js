@@ -4,15 +4,18 @@ import {
   setSelectedId, setSendingId, setActiveTab, setActiveSubTab, ignoreStorageChange,
   setIgnoreStorageChange, logListEl, detailEmpty, detailContent, searchInput, filterMethod,
   filterStatus, statusText, statusCount, divider, MAX_LOGS, theme, setTheme, captureFilter,
-  timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting, raceCount, setRaceCount
+  timeoutMs, setTimeoutMs, saveTimeoutSetting, loadTimeoutSetting, raceCount, setRaceCount,
+  fuzzingInProgress, setFuzzingInProgress, fuzzingResults, setFuzzingResults, setFuzzingTotal, setFuzzingDone
 } from './modules/state.js';
-import { loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile, 
-  importLogsFromFile, saveSettings, loadSettings } from './modules/storage.js';
+import {
+  loadLogs, saveLogs, loadCaptureFilter, saveCaptureFilter, exportLogsToFile,
+  importLogsFromFile, saveSettings, loadSettings
+} from './modules/storage.js';
 import { filterLogs } from './modules/filter.js';
 import { renderList, renderDetail } from './modules/render.js';
-import { startCapture } from './modules/network.js';
+import { startCapture, startFuzzing } from './modules/network.js';
 import { refresh } from './modules/refresh.js';
-import { getLatestVersion } from './modules/helpers.js';
+import { getLatestVersion, getPresetPayloads } from './modules/helpers.js';
 
 const reloadBtn = document.getElementById('reload-btn');
 const btnIcon = document.getElementById('btn-icon');
@@ -238,6 +241,80 @@ chrome.storage.onChanged.addListener((changes, ns) => {
     }
   }
 
+  // Fuzzing modal
+  const fuzzModal = document.getElementById('fuzzModal');
+  const fuzzTarget = document.getElementById('fuzz-target');
+  const fuzzName = document.getElementById('fuzz-name');
+  const fuzzPayloadSource = document.getElementById('fuzz-payload-source');
+  const fuzzPresetContainer = document.getElementById('fuzz-preset-container');
+  const fuzzFileContainer = document.getElementById('fuzz-file-container');
+  const fuzzPreset = document.getElementById('fuzz-preset');
+  const fuzzFile = document.getElementById('fuzz-file');
+  const fuzzConcurrency = document.getElementById('fuzz-concurrency');
+  const fuzzCancelBtn = document.getElementById('fuzzCancelBtn');
+  const fuzzStartBtn = document.getElementById('fuzzStartBtn');
+
+  // Toggle tampilan preset/file
+  fuzzPayloadSource.addEventListener('change', () => {
+    const isFile = fuzzPayloadSource.value === 'file';
+    fuzzPresetContainer.style.display = isFile ? 'none' : 'block';
+    fuzzFileContainer.style.display = isFile ? 'block' : 'none';
+  });
+
+  // Buka modal dari tombol Fuzz (nanti dipasang di events)
+  window.openFuzzModal = function () {
+    // Isi nama parameter dari query params yang dipilih? Bisa diisi otomatis dari params yang ada? Kita biarkan user isi manual.
+    fuzzModal.style.display = 'flex';
+    // Reset value
+    fuzzName.value = '';
+    fuzzPreset.value = 'xss';
+    fuzzConcurrency.value = 3;
+    fuzzFile.value = '';
+  };
+
+  fuzzCancelBtn.addEventListener('click', () => {
+    fuzzModal.style.display = 'none';
+  });
+
+  fuzzStartBtn.addEventListener('click', async () => {
+    const target = fuzzTarget.value; // 'param' or 'header'
+    const name = fuzzName.value.trim();
+    if (!name) {
+      alert('Please enter parameter/header name');
+      return;
+    }
+    const concurrency = parseInt(fuzzConcurrency.value, 10) || 1;
+    let payloads = [];
+    if (fuzzPayloadSource.value === 'preset') {
+      const presetName = fuzzPreset.value;
+      // Ambil preset dari helper atau define di sini
+      payloads = getPresetPayloads(presetName);
+    } else {
+      // file
+      const file = fuzzFile.files[0];
+      if (!file) {
+        alert('Please select a file');
+        return;
+      }
+      const text = await file.text();
+      payloads = text.split('\n').map(s => s.trim()).filter(s => s);
+    }
+    if (payloads.length === 0) {
+      alert('No payloads loaded');
+      return;
+    }
+
+    fuzzModal.style.display = 'none';
+
+    // Panggil startFuzzing
+    await startFuzzing(target, name, payloads, concurrency);
+  });
+
+  // Tutup modal jika klik di luar
+  fuzzModal.addEventListener('click', (e) => {
+    if (e.target === fuzzModal) fuzzModal.style.display = 'none';
+  });
+
 })();
 
 
@@ -453,6 +530,7 @@ if (aboutModal) {
     }
   });
 }
+
 
 // Panggil setelah DOM siap
 initCaptureFilter();

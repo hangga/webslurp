@@ -3540,3 +3540,11 @@ body {
   margin-top: 4px;
   font-style: italic;
 }
+
+.btn-fuzz {
+  background: #9b59b6;
+  color: #fff;
+}
+.btn-fuzz:hover {
+  background: #8e44ad;
+}
