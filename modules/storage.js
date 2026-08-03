@@ -80,14 +80,13 @@ export function exportLogsToFile() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  // a.download = `brutu-logs-${new Date().toISOString().slice(0,10)}.json`;
   
   const timestamp = new Date().toISOString()
     .replace('T', '_')
     .replace(/:/g, '-')
     .slice(0, 19);
 
-  a.download = `brutu-logs-${timestamp}.json`;
+  a.download = `webslurp-logs-${timestamp}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

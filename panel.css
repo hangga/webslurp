@@ -1382,6 +1382,7 @@ body {
   padding: 2px;
   filter: drop-shadow(0px 50px 0 var(--text-primary));
   transform: translateY(-50px);
+  vertical-align: middle;
 }
 
 .btn-icon:hover {
@@ -1469,6 +1470,10 @@ body {
   transition: background 0.15s, opacity 0.15s;
   background: var(--bg-input);
   color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn:hover {

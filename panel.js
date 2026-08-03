@@ -190,7 +190,7 @@ if (timeoutSaveBtn) {
 function updateRaceButtonLabel() {
   const raceBtn = document.getElementById('action-race');
   if (raceBtn) {
-    raceBtn.textContent = `Race (${raceCount})`;
+    raceBtn.textContent = `⚡ Race (${raceCount})`;
   }
 }
 

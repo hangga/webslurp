@@ -274,6 +274,7 @@ export function renderList(callback) {
 
         entry.innerHTML = `
           ${securityBadge ? securityBadge : ''}
+          ${log.isRace ? '⚡':''}
           <span class="req-icon">${getCategoryIcon(log.category)}</span>
           ${log.hasAuth ? '<span class="auth-indicator">🔐</span>' : ''}
           <span class="status ${sc}">${log.status}</span>
@@ -366,7 +367,7 @@ export function renderDetail(idx) {
     <button class="detail-tab ${activeTab === 'request' ? 'active' : ''}" data-tab="request">Request</button>
     <button class="detail-tab ${activeTab === 'response' ? 'active' : ''}" data-tab="response">Response ${log.status ? `<span class="badge">${log.status}</span>` : ''}</button>
     <div class="detail-tabs-actions">
-      <button class="btn btn-copy" id="action-copy">📋 Copy cURL</button>
+      <button class="btn secondary" id="action-copy"><img src="icons/copy.png" class="btn-icon"/>cURL</button>
       <button id="notes-toggle-detail" class="notes-toggle-btn" title="Toggle notes panel">
         <img src="icons/notes.png" class="btn-icon" title="Open from file" />
       </button>
