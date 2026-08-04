@@ -16,6 +16,13 @@ export let notesWidth = 280; // default width in px
 export function setNotesVisible(val) { notesVisible = val; }
 export function setNotesWidth(val) { notesWidth = val; }
 
+// ── State untuk Race Condition Test ──
+export let raceCount = 3;
+
+export function setRaceCount(val) {
+  raceCount = Math.min(Math.max(val, 2), 10);
+}
+
 export function setOriginalLogSnapshot(snapshot) {
   originalLogSnapshot = snapshot;
 }

@@ -1,8 +1,9 @@
 // events.js
-import { logs, selectedId, activeSubTab, setActiveSubTab, statusText } from './state.js';
+import { logs, selectedId, activeSubTab, setActiveSubTab, statusText, raceCount } from './state.js';
 import { escapeHtml, headersToObject, buildUrlWithParams, parseMultipartFormData } from './helpers.js';
 import { saveLogs } from './storage.js';
 import { renderDetail } from './render.js';
+import { sendParallelRequest } from './network.js'
 
 let detailDelegationActive = false;
 
@@ -292,6 +293,13 @@ export function attachSubtabEvents(idx) {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(saveLogs, 300);
     };
+  }
+
+  const raceBtn = document.getElementById('action-race');
+  if (raceBtn) {
+    raceBtn.addEventListener('click', () => {
+      sendParallelRequest(idx, raceCount);
+    });
   }
 
   // ── Elemen tunggal: method, url, body mode, auth, dll. ──
